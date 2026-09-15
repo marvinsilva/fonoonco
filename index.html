@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Fonoaudiologia & Disfagia</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS CDN (para ler planilhas Excel) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .card { background: white; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  </style>
+</head>
+<body class="p-6">
+
+  <!-- Cabeçalho -->
+  <header class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800"><i class="fa-solid fa-stethoscope text-indigo-600 mr-2"></i>Dashboard Fonoaudiológico - Disfagia</h1>
+      <p class="text-slate-500 text-sm">Processamento inteligente de evoluções clínicas via Excel + Regex</p>
+    </div>
+
+    <!-- Upload de Planilha -->
+    <div class="flex items-center gap-3">
+      <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow">
+        <i class="fa-solid fa-file-excel"></i>
+        <span>Carregar Planilha Excel</span>
+        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
+      </label>
+    </div>
+  </header>
+
+  <!-- Status / Filtros -->
+  <div id="statusAlert" class="mb-6 card p-4 border-l-4 border-indigo-500 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid fa-circle-info text-indigo-500 text-xl"></i>
+      <span id="statusText" class="text-slate-700 text-sm font-medium">Nenhuma planilha carregada. Selecione um arquivo Excel para extrair os dados.</span>
+    </div>
+    <span id="totalRecordsBadge" class="hidden bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">0 registros</span>
+  </div>
+
+  <!-- Cards KPI -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div class="card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
+      <div>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Atendimentos</p>
+        <h3 id="kpiTotal" class="text-2xl font-bold text-slate-800">0</h3>
+      </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-vial-tube"></i></div>
+      <div>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Uso de SNE</p>
+        <h3 id="kpiSNE" class="text-2xl font-bold text-slate-800">0%</h3>
+      </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-head-side-mask"></i></div>
+      <div>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Uso de TQT</p>
+        <h3 id="kpiTQT" class="text-2xl font-bold text-slate-800">0%</h3>
+      </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-utensils"></i></div>
+      <div>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Média FOIS</p>
+        <h3 id="kpiFOIS" class="text-2xl font-bold text-slate-800">-</h3>
+      </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-xl"><i class="fa-solid fa-chart-line"></i></div>
+      <div>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Média ASHA</p>
+        <h3 id="kpiASHA" class="text-2xl font-bold text-slate-800">-</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="card p-5">
+      <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-indigo-500"></i> Grau de Disfagia</h3>
+      <div class="relative h-64">
+        <canvas id="chartDisfagia"></canvas>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-bar text-indigo-500"></i> Escala FOIS (Níveis)</h3>
+      <div class="relative h-64">
+        <canvas id="chartFOIS"></canvas>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-notes-medical text-indigo-500"></i> Dispositivos / Achados</h3>
+      <div class="relative h-64">
+        <canvas id="chartDispositivos"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de Dados Extraídos -->
+  <div class="card p-5">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+      <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-table text-indigo-500"></i> Registros Estruturados via Regex</h3>
+      <input type="text" id="tableSearch" placeholder="Filtrar prontuário, grau..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-slate-600">
+        <thead class="bg-slate-100 text-slate-700 uppercase font-semibold">
+          <tr>
+            <th class="p-3">Data</th>
+            <th class="p-3">Prontuário</th>
+            <th class="p-3">Idade</th>
+            <th class="p-3">Grau Disfagia</th>
+            <th class="p-3 text-center">FOIS</th>
+            <th class="p-3 text-center">ASHA</th>
+            <th class="p-3 text-center">SNE</th>
+            <th class="p-3 text-center">TQT</th>
+            <th class="p-3">Estase Salivar</th>
+            <th class="p-3">Conduta Dieta</th>
+            <th class="p-3">Exercícios</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody" class="divide-y divide-slate-200">
+          <tr>
+            <td colspan="11" class="p-4 text-center text-slate-400">Nenhum dado para exibir. Carregue uma planilha.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Script de Processamento e Lógica -->
+  <script>
+    let rawData = [];
+    let parsedData = [];
+    let chartDisfagiaInst, chartFOISInst, chartDispositivosInst;
+
+    // --- FUNÇÃO REGEX PARA EXTRAIR DADOS DA EVOLUÇÃO ---
+    function extrairDadosEvolucao(texto) {
+      if (!texto || typeof texto !== 'string') return {};
+
+      const txt = texto.toLowerCase();
+
+      // 1. FOIS (ex: FOIS 5 ou FOIS: 5)
+      const foisMatch = texto.match(/FOIS\s*[:\-]?\s*([1-7])/i);
+      const fois = foisMatch ? parseInt(foisMatch[1]) : null;
+
+      // 2. ASHA NOMS (ex: ASHA 5 ou ASHA NOMS 5)
+      const ashaMatch = texto.match(/ASHA(?:\s*NOMS)?\s*[:\-]?\s*([1-7])/i);
+      const asha = ashaMatch ? parseInt(ashaMatch[1]) : null;
+
+      // 3. Grau de Disfagia
+      let grauDisfagia = 'Não informado';
+      if (/disfagia\s*orofar[íi]ngea\s*(leve\s*à\s*moderada|leve\s*a\s*moderada)/i.test(texto)) {
+        grauDisfagia = 'Leve a Moderada';
+      } else if (/disfagia\s*orofar[íi]ngea\s*(moderada\s*à\s*grave|moderada\s*a\s*grave)/i.test(texto)) {
+        grauDisfagia = 'Moderada a Grave';
+      } else if (/disfagia\s*orofar[íi]ngea\s*leve/i.test(texto) || /disfagia\s*leve/i.test(texto)) {
+        grauDisfagia = 'Leve';
+      } else if (/disfagia\s*orofar[íi]ngea\s*moderada/i.test(texto) || /disfagia\s*moderada/i.test(texto)) {
+        grauDisfagia = 'Moderada';
+      } else if (/disfagia\s*orofar[íi]ngea\s*grave/i.test(texto) || /disfagia\s*grave/i.test(texto)) {
+        grauDisfagia = 'Grave';
+      } else if (/sem\s*disfagia|degluti[çc][ãa]o\s*normal/i.test(texto)) {
+        grauDisfagia = 'Normal';
+      }
+
+      // 4. SNE (Sonda Nasoentérica)
+      const sne = (/sne\b|sonda\s*nasoent/i.test(texto)) ? 'Sim' : 'Não';
+
+      // 5. TQT (Traqueostomia)
+      const tqt = (/tqt\b|traqueostomia|c[âa]nula/i.test(texto)) ? 'Sim' : 'Não';
+
+      // 6. Estase Salivar / Penetração Salivar
+      let estase = 'Não';
+      if (/estase\s*salivar|penetrap[çc][ãa]o\s*lar[íi]ngea\s*salivar|aspira[çc][ãa]o\s*de\s*saliva/i.test(texto)) {
+        estase = 'Sim';
+      }
+
+      // 7. Conduta Dieta (Sugiro dieta VO...)
+      const dietaMatch = texto.match(/sugiro\s*dieta\s*vo\s*([^.,;\n\r]+)/i) || texto.match(/dieta\s*vo\s*([^.,;\n\r]+)/i);
+      const dieta = dietaMatch ? dietaMatch[1].trim() : 'VO mantida/não especificada';
+
+      // 8. Exercícios (Terapia Direta)
+      let exercicios = [];
+      if (txt.includes('masako')) exercicios.push('Masako');
+      if (txt.includes('tvso')) exercicios.push('TVSO');
+      if (txt.includes('fonação inspiratória') || txt.includes('fonacao inspiratoria')) exercicios.push('Fonação Insp.');
+      if (txt.includes('ctar')) exercicios.push('CTAR');
+      if (txt.includes('shaker')) exercicios.push('Shaker');
+      if (txt.includes('eletro') || txt.includes('eletrostimulação')) exercicios.push('Eletroterapia');
+
+      // 9. Eletro (Sim/Não)
+      const eletro = (/eletro|eletrostimula/i.test(texto)) ? 'Sim' : 'Não';
+
+      // 10. Peso
+      const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i);
+      const peso = pesoMatch ? pesoMatch[1] : '-';
+
+      return {
+        fois,
+        asha,
+        grauDisfagia,
+        sne,
+        tqt,
+        estase,
+        dieta,
+        eletro,
+        peso,
+        exercicios: exercicios.length > 0 ? exercicios.join(', ') : 'Nenhum/Não especificado'
+      };
+    }
+
+    // --- LEITURA DO ARQUIVO EXCEL ---
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheet];
+        
+        rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        processarDadosExcel(rawData);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // --- PROCESSAMENTO E UNIFICAÇÃO DOS DADOS ---
+    function processarDadosExcel(rows) {
+      parsedData = rows.map(row => {
+        // Mapeamento flexível de nomes de colunas
+        const evolucaoTexto = row['EVOLUÇÃO COMPLETA'] || row['EVOLUÇÃO'] || row['EVOLUCAO'] || row['HISTÓRICO'] || '';
+        const prontuario = row['PRONTUÁRIO'] || row['PRONTUARIO'] || row['Prontuário'] || 'S/N';
+        const dataAtendimento = row['DATA'] || row['DATA ATENDIMENTO'] || row['Data'] || 'S/D';
+        const idade = row['IDADE'] || row['Idade'] || '-';
+
+        // Extrai via Regex
+        const dadosExtrai = extrairDadosEvolucao(evolucaoTexto);
+
+        return {
+          prontuario,
+          data: dataAtendimento,
+          idade,
+          ...dadosExtrai
+        };
+      });
+
+      atualizarInterface();
+    }
+
+    // --- ATUALIZAÇÃO DO DASHBOARD ---
+    function atualizarInterface() {
+      document.getElementById('statusText').innerText = `Planilha processada com sucesso! ${parsedData.length} registros analisados via Regex.`;
+      const badge = document.getElementById('totalRecordsBadge');
+      badge.innerText = `${parsedData.length} registros`;
+      badge.classList.remove('hidden');
+
+      // KPIs
+      document.getElementById('kpiTotal').innerText = parsedData.length;
+
+      const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
+      document.getElementById('kpiSNE').innerText = parsedData.length ? Math.round((totalSNE / parsedData.length) * 100) + '%' : '0%';
+
+      const totalTQT = parsedData.filter(d => d.tqt === 'Sim').length;
+      document.getElementById('kpiTQT').innerText = parsedData.length ? Math.round((totalTQT / parsedData.length) * 100) + '%' : '0%';
+
+      const foisValidos = parsedData.filter(d => d.fois !== null).map(d => d.fois);
+      const mediaFOIS = foisValidos.length ? (foisValidos.reduce((a,b) => a+b, 0) / foisValidos.length).toFixed(1) : '-';
+      document.getElementById('kpiFOIS').innerText = mediaFOIS;
+
+      const ashaValidos = parsedData.filter(d => d.asha !== null).map(d => d.asha);
+      const mediaASHA = ashaValidos.length ? (ashaValidos.reduce((a,b) => a+b, 0) / ashaValidos.length).toFixed(1) : '-';
+      document.getElementById('kpiASHA').innerText = mediaASHA;
+
+      // Renderização
+      renderTabela(parsedData);
+      renderGraficos();
+    }
+
+    // --- TABELA ---
+    function renderTabela(data) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="p-4 text-center text-slate-400">Nenhum dado encontrado.</td></tr>`;
+        return;
+      }
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+
+        tr.innerHTML = `
+          <td class="p-3 font-medium text-slate-700">${item.data}</td>
+          <td class="p-3 font-semibold text-indigo-600">${item.prontuario}</td>
+          <td class="p-3">${item.idade}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getGrauBadgeClass(item.grauDisfagia)}">${item.grauDisfagia}</span></td>
+          <td class="p-3 text-center font-bold">${item.fois || '-'}</td>
+          <td class="p-3 text-center font-bold">${item.asha || '-'}</td>
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.sne === 'Sim' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${item.sne}</span></td>
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.tqt === 'Sim' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'}">${item.tqt}</span></td>
+          <td class="p-3">${item.estase}</td>
+          <td class="p-3 truncate max-w-xs" title="${item.dieta}">${item.dieta}</td>
+          <td class="p-3 text-xs text-slate-500">${item.exercicios}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getGrauBadgeClass(grau) {
+      if (grau.includes('Leve a Moderada') || grau.includes('Moderada')) return 'bg-amber-100 text-amber-800';
+      if (grau.includes('Grave')) return 'bg-red-100 text-red-800';
+      if (grau.includes('Leve')) return 'bg-blue-100 text-blue-800';
+      if (grau.includes('Normal')) return 'bg-emerald-100 text-emerald-800';
+      return 'bg-slate-100 text-slate-600';
+    }
+
+    // --- GRÁFICOS ---
+    function renderGraficos() {
+      // Destruir instâncias anteriores se existirem
+      if (chartDisfagiaInst) chartDisfagiaInst.destroy();
+      if (chartFOISInst) chartFOISInst.destroy();
+      if (chartDispositivosInst) chartDispositivosInst.destroy();
+
+      // 1. Gráfico Grau Disfagia
+      const contagemGrau = {};
+      parsedData.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
+
+      chartDisfagiaInst = new Chart(document.getElementById('chartDisfagia'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(contagemGrau),
+          datasets: [{
+            data: Object.values(contagemGrau),
+            backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 2. Gráfico FOIS
+      const contagemFOIS = { 'Nível 1':0, 'Nível 2':0, 'Nível 3':0, 'Nível 4':0, 'Nível 5':0, 'Nível 6':0, 'Nível 7':0 };
+      parsedData.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
+
+      chartFOISInst = new Chart(document.getElementById('chartFOIS'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(contagemFOIS),
+          datasets: [{
+            label: 'Nº Pacientes',
+            data: Object.values(contagemFOIS),
+            backgroundColor: '#6366f1'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      // 3. Gráfico Dispositivos
+      const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
+      const totalTQT = parsedData.filter(d => d.tqt === 'Sim').length;
+      const totalEstase = parsedData.filter(d => d.estase === 'Sim').length;
+      const totalEletro = parsedData.filter(d => d.eletro === 'Sim').length;
+
+      chartDispositivosInst = new Chart(document.getElementById('chartDispositivos'), {
+        type: 'bar',
+        data: {
+          labels: ['SNE', 'TQT', 'Estase Salivar', 'Eletroterapia'],
+          datasets: [{
+            label: 'Total de Ocorrências',
+            data: [totalSNE, totalTQT, totalEstase, totalEletro],
+            backgroundColor: ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    }
+
+    // Busca na tabela
+    document.getElementById('tableSearch').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
+      const filtered = parsedData.filter(d => 
+        d.prontuario.toString().toLowerCase().includes(query) ||
+        d.grauDisfagia.toLowerCase().includes(query) ||
+        d.dieta.toLowerCase().includes(query)
+      );
+      renderTabela(filtered);
+    });
+  </script>
+</body>
+</html>
