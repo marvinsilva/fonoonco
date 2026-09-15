@@ -71,8 +71,8 @@
         <i class="fa-solid fa-users"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Atendimentos</p>
-        <h3 id="kpiTotal" class="text-2xl font-bold text-slate-800">0</h3>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Atend. (Únicos)</p>
+        <h3 id="kpiTotal" class="text-2xl font-bold text-slate-800">0 (0)</h3>
       </div>
     </div>
 
@@ -149,10 +149,24 @@
   <div class="card p-5 mb-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
       <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-table text-indigo-500"></i> Registros Estruturados via Regex</h3>
-      <div class="flex items-center gap-2">
-        <input type="text" id="tableSearch" placeholder="Buscar texto livre..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      
+      <!-- Controles Superiores de Busca -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Filtro por Paciente -->
+        <select id="filterPacienteGlobal" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+          <option value="">Todos os Pacientes</option>
+        </select>
+
+        <!-- Filtro por Data -->
+        <select id="filterDataGlobal" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+          <option value="">Todas as Datas</option>
+        </select>
+
+        <!-- Busca por texto -->
+        <input type="text" id="tableSearch" placeholder="Buscar texto livre..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-full md:w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        
         <button id="resetFilters" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-2 rounded-lg transition" title="Limpar Filtros">
-          Limpar Filtros
+          Limpar
         </button>
       </div>
     </div>
@@ -305,7 +319,7 @@
       return strVal;
     }
 
-    // --- REGEX NAS EVOLUÇÕES/HISTÓRICO ---
+    // --- EXTRAÇÃO VIA REGEX ---
     function extrairDadosEvolucao(textoOriginal) {
       if (!textoOriginal || typeof textoOriginal !== 'string') return {
         fois: null, asha: null, grauDisfagia: 'Não informado',
@@ -348,9 +362,22 @@
       // 6. Estase Salivar
       const estase = /estase\s*salivar/i.test(texto) ? 'Sim' : 'Não';
 
-      // 7. Conduta Dieta
+      // 7. Conduta Dieta (Refinado para capturar estritamente dietas e tratar o traço inicial)
+      let dieta = 'Não especificada em Conduta';
       const condutaMatch = texto.match(/conduta(?:s|[\s\-]*fonoaudi[óo]lica|[\s\-]*fono)?\s*[:\-]\s*([^.,;\n\r]+)/i);
-      const dieta = condutaMatch ? condutaMatch[1].trim() : 'Não especificada em Conduta';
+      
+      if (condutaMatch) {
+        let trechoConduta = condutaMatch[1].trim();
+        // Remove traços ou pontuações iniciais
+        trechoConduta = trechoConduta.replace(/^[\s\-:\.,;]+/, '').trim();
+
+        // Filtro de relevância para dietas e ingestão de alimentos
+        const regexTermosDieta = /\b(dieta|vo|via\s*oral|zero|branda|pastosa|l[íi]quid[ao]s?|espessad[ao]s?|pastoso|brand[ao]|livre|geral|brand|sonda|nasoenteral|sne|parenteral|enteral|fracionad[ao]|consist[êe]ncia)\b/i;
+        
+        if (regexTermosDieta.test(trechoConduta)) {
+          dieta = trechoConduta;
+        }
+      }
 
       // 8. Exercícios
       let exercicios = [];
@@ -446,7 +473,27 @@
         };
       });
 
+      preencherSelectsGlobais();
       atualizarInterface();
+    }
+
+    // --- PREENCHER FILTROS DE PACIENTE E DATA ---
+    function preencherSelectsGlobais() {
+      const selectPacientes = document.getElementById('filterPacienteGlobal');
+      const selectDatas = document.getElementById('filterDataGlobal');
+
+      const pacientesUnicos = [...new Set(parsedData.map(d => d.prontuario))].sort();
+      const datasUnicas = [...new Set(parsedData.map(d => d.data))].sort();
+
+      selectPacientes.innerHTML = '<option value="">Todos os Pacientes</option>';
+      pacientesUnicos.forEach(p => {
+        selectPacientes.innerHTML += `<option value="${p}">${p}</option>`;
+      });
+
+      selectDatas.innerHTML = '<option value="">Todas as Datas</option>';
+      datasUnicas.forEach(d => {
+        selectDatas.innerHTML += `<option value="${d}">${d}</option>`;
+      });
     }
 
     // --- ATUALIZAÇÃO DA INTERFACE ---
@@ -455,7 +502,9 @@
       badge.innerText = `${parsedData.length} registros`;
       badge.classList.remove('hidden');
 
-      document.getElementById('kpiTotal').innerText = parsedData.length;
+      // Total de Atendimentos e Pacientes Únicos
+      const pacientesUnicosTotal = new Set(parsedData.map(d => d.prontuario)).size;
+      document.getElementById('kpiTotal').innerText = `${parsedData.length} (${pacientesUnicosTotal})`;
 
       const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
       document.getElementById('kpiSNE').innerText = parsedData.length ? Math.round((totalSNE / parsedData.length) * 100) + '%' : '0%';
@@ -523,17 +572,64 @@
       const contagemGrau = {};
       parsedData.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
 
+      const labelsDisfagia = Object.keys(contagemGrau);
+      const dataDisfagia = Object.values(contagemGrau);
+
+      // Ocultar por padrão a fatia "Não informado" no gráfico de rosca
+      const indexNaoInformado = labelsDisfagia.indexOf('Não informado');
+
       chartDisfagiaInst = new Chart(document.getElementById('chartDisfagia'), {
         type: 'doughnut',
         data: {
-          labels: Object.keys(contagemGrau),
+          labels: labelsDisfagia,
           datasets: [{
-            data: Object.values(contagemGrau),
-            backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b']
+            data: dataDisfagia,
+            backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b', '#8b5cf6']
           }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              onClick: (e, legendItem, legend) => {
+                const index = legendItem.index;
+                const ci = legend.chart;
+                if (ci.isDatasetVisible(0)) {
+                  ci.toggleDataVisibility(index);
+                  ci.update();
+                }
+              },
+              labels: {
+                generateLabels: (chart) => {
+                  const data = chart.data;
+                  if (data.labels.length && data.datasets.length) {
+                    return data.labels.map((label, i) => {
+                      const meta = chart.getDatasetMeta(0);
+                      const style = meta.controller.getStyle(i);
+                      return {
+                        text: label,
+                        fillStyle: style.backgroundColor,
+                        strokeStyle: style.borderColor,
+                        lineWidth: style.borderWidth,
+                        hidden: chart.getDataVisibility(i) === false,
+                        index: i
+                      };
+                    });
+                  }
+                  return [];
+                }
+              }
+            }
+          }
+        }
       });
+
+      // Ocultar fidedignamente o elemento inicial se ele for "Não informado"
+      if (indexNaoInformado !== -1) {
+        chartDisfagiaInst.toggleDataVisibility(indexNaoInformado);
+        chartDisfagiaInst.update();
+      }
 
       const contagemFOIS = { 'Nível 1':0, 'Nível 2':0, 'Nível 3':0, 'Nível 4':0, 'Nível 5':0, 'Nível 6':0, 'Nível 7':0 };
       parsedData.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
@@ -573,6 +669,9 @@
     // --- LÓGICA DE FILTRAGEM COMBINADA ---
     function aplicarFiltros() {
       const query = document.getElementById('tableSearch').value.toLowerCase();
+      const valPaciente = document.getElementById('filterPacienteGlobal').value;
+      const valData = document.getElementById('filterDataGlobal').value;
+
       const valGrau = document.getElementById('filterGrau').value;
       const valFOIS = document.getElementById('filterFOIS').value;
       const valASHA = document.getElementById('filterASHA').value;
@@ -581,7 +680,11 @@
       const valEstase = document.getElementById('filterEstase').value;
 
       const filtrados = parsedData.filter(d => {
-        // Filtros drop-down de cabeçalho
+        // Filtros globais (Paciente e Data)
+        if (valPaciente && d.prontuario !== valPaciente) return false;
+        if (valData && d.data !== valData) return false;
+
+        // Filtros drop-down de cabeçalho da tabela
         if (valGrau && d.grauDisfagia !== valGrau) return false;
         if (valFOIS && (d.fois === null || d.fois.toString() !== valFOIS)) return false;
         if (valASHA && (d.asha === null || d.asha.toString() !== valASHA)) return false;
@@ -605,11 +708,15 @@
     document.querySelectorAll('.filter-trigger').forEach(el => {
       el.addEventListener('change', aplicarFiltros);
     });
+    document.getElementById('filterPacienteGlobal').addEventListener('change', aplicarFiltros);
+    document.getElementById('filterDataGlobal').addEventListener('change', aplicarFiltros);
     document.getElementById('tableSearch').addEventListener('input', aplicarFiltros);
 
     // Botão Limpar Filtros
     document.getElementById('resetFilters').addEventListener('click', () => {
       document.getElementById('tableSearch').value = '';
+      document.getElementById('filterPacienteGlobal').value = '';
+      document.getElementById('filterDataGlobal').value = '';
       document.querySelectorAll('.filter-trigger').forEach(select => select.value = '');
       aplicarFiltros();
     });
