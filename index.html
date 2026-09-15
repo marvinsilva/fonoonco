@@ -64,7 +64,7 @@
   </div>
 
   <!-- Cards KPI -->
-  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
     <!-- Card Total Atendimentos -->
     <div class="card p-4 flex items-center gap-4">
       <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl shrink-0">
@@ -117,17 +117,6 @@
       <div>
         <p class="text-xs text-slate-500 uppercase font-semibold">Em RT</p>
         <h3 id="kpiRT" class="text-2xl font-bold text-slate-800">0%</h3>
-      </div>
-    </div>
-
-    <!-- Card Média Peso -->
-    <div class="card p-4 flex items-center gap-4">
-      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xl shrink-0">
-        <i class="fa-solid fa-weight-scale"></i>
-      </div>
-      <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Média Peso</p>
-        <h3 id="kpiPeso" class="text-2xl font-bold text-slate-800">-</h3>
       </div>
     </div>
   </div>
@@ -288,7 +277,6 @@
       return strVal;
     }
 
-    // --- EXTRAÇÃO EXPANDIDA VIA REGEX ---
     function extrairDadosEvolucao(textoOriginal) {
       if (!textoOriginal || typeof textoOriginal !== 'string') return {
         fois: null, asha: null, grauDisfagia: 'Não informado',
@@ -300,11 +288,11 @@
 
       const texto = textoOriginal.replace(/\s+/g, ' ').trim();
 
-      // 1. Peso
+      // Peso (mantido para exibição na tabela se houver)
       const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i) || texto.match(/([\d,.]+)\s*kg/i);
       const peso = pesoMatch ? pesoMatch[1].replace(',', '.') : '-';
 
-      // 2. Radioterapia (RT) e Dose (Gy)
+      // Radioterapia (RT) e Dose (Gy)
       let rt = 'Não';
       let doseRT = '-';
       if (/radioterapia|\brt\b/i.test(texto)) {
@@ -313,10 +301,10 @@
         if (doseMatch) doseRT = `${doseMatch[1]} Gy`;
       }
 
-      // 3. Quimioterapia (QT)
+      // Quimioterapia (QT)
       const qt = (/quimioterapia|\bqt\b/i.test(texto)) ? 'Sim' : 'Não';
 
-      // 4. Cirurgias (CX)
+      // Cirurgias (CX)
       let cirurgia = 'Não';
       const cxMatch = texto.match(/(?:cirurgia|cx|procedimento\s*cir[úu]rgico)[:\s]*([^.,;\n\r]+)/i);
       if (cxMatch) {
@@ -326,7 +314,7 @@
         cirurgia = achadoCx ? achadoCx[0] : 'Sim';
       }
 
-      // 5. Dieta VO Atual (antes da alteração)
+      // Dieta VO Atual
       let dietaAtual = 'Não informada';
       const dietaAtualMatch = texto.match(/(?:dieta\s*atual|ingesta\s*atual|recebendo\s*dieta|vo\s*atual|mant[ée]m\s*dieta)[:\s]*([^.,;\n\r]+)/i);
       if (dietaAtualMatch) {
@@ -336,21 +324,21 @@
         if (achadoDieta) dietaAtual = achadoDieta[0];
       }
 
-      // 6. Edema
+      // Edema
       let edema = 'Não';
       if (/edema/i.test(texto)) {
         const edemaMatch = texto.match(/edema[^\.,;]*/i);
         edema = edemaMatch ? edemaMatch[0] : 'Sim';
       }
 
-      // 7. FOIS & ASHA
+      // FOIS & ASHA
       const foisMatch = texto.match(/FOIS\s*[:\-]?\s*([1-7])/i);
       const fois = foisMatch ? parseInt(foisMatch[1]) : null;
 
       const ashaMatch = texto.match(/ASHA(?:\s*NOMS)?\s*[:\-]?\s*([1-7])/i);
       const asha = ashaMatch ? parseInt(ashaMatch[1]) : null;
 
-      // 8. Grau Disfagia
+      // Grau Disfagia
       let grauDisfagia = 'Não informado';
       if (/disfagia\s*orofar[íi]ngea\s*(leve\s*à\s*moderada|leve\s*a\s*moderada)/i.test(texto)) grauDisfagia = 'Leve a Moderada';
       else if (/disfagia\s*orofar[íi]ngea\s*(moderada\s*à\s*grave|moderada\s*a\s*grave)/i.test(texto)) grauDisfagia = 'Moderada a Grave';
@@ -472,10 +460,6 @@
 
       const totalRT = parsedData.filter(d => d.rt === 'Sim').length;
       document.getElementById('kpiRT').innerText = parsedData.length ? Math.round((totalRT / parsedData.length) * 100) + '%' : '0%';
-
-      const pesosValidos = parsedData.map(d => parseFloat(d.peso)).filter(p => !isNaN(p));
-      const mediaPeso = pesosValidos.length ? (pesosValidos.reduce((a,b) => a+b, 0) / pesosValidos.length).toFixed(1) + ' kg' : '-';
-      document.getElementById('kpiPeso').innerText = mediaPeso;
 
       aplicarFiltros();
       renderGraficos();
