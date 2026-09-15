@@ -25,7 +25,7 @@
   <header class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-800"><i class="fa-solid fa-stethoscope text-indigo-600 mr-2"></i>Dashboard Fonoaudiológico - Disfagia</h1>
-      <p class="text-slate-500 text-sm">Processamento inteligente de evoluções clínicas via Excel + Regex</p>
+      <p class="text-slate-500 text-sm">Análise da aba "DADOS" via Excel + Expressões Regulares (Regex)</p>
     </div>
 
     <!-- Upload de Planilha -->
@@ -42,7 +42,7 @@
   <div id="statusAlert" class="mb-6 card p-4 border-l-4 border-indigo-500 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <i class="fa-solid fa-circle-info text-indigo-500 text-xl"></i>
-      <span id="statusText" class="text-slate-700 text-sm font-medium">Nenhuma planilha carregada. Selecione um arquivo Excel para extrair os dados.</span>
+      <span id="statusText" class="text-slate-700 text-sm font-medium">Buscando base de dados padrão (aba DADOS)...</span>
     </div>
     <span id="totalRecordsBadge" class="hidden bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">0 registros</span>
   </div>
@@ -125,9 +125,9 @@
       <table class="w-full text-left text-xs text-slate-600">
         <thead class="bg-slate-100 text-slate-700 uppercase font-semibold">
           <tr>
-            <th class="p-3">Data</th>
-            <th class="p-3">Prontuário</th>
-            <th class="p-3">Idade</th>
+            <th class="p-3">Data (Col A)</th>
+            <th class="p-3">Prontuário (Col B)</th>
+            <th class="p-3">Idade (Col E)</th>
             <th class="p-3">Grau Disfagia</th>
             <th class="p-3 text-center">FOIS</th>
             <th class="p-3 text-center">ASHA</th>
@@ -140,7 +140,7 @@
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200">
           <tr>
-            <td colspan="11" class="p-4 text-center text-slate-400">Nenhum dado para exibir. Carregue uma planilha.</td>
+            <td colspan="11" class="p-4 text-center text-slate-400">Carregando dados...</td>
           </tr>
         </tbody>
       </table>
@@ -153,9 +153,68 @@
     let parsedData = [];
     let chartDisfagiaInst, chartFOISInst, chartDispositivosInst;
 
-    // --- FUNÇÃO REGEX PARA EXTRAIR DADOS DA EVOLUÇÃO ---
+    // --- CARREGAMENTO DA ABA 'DADOS' ---
+    window.addEventListener('DOMContentLoaded', () => {
+      const arquivosTentativos = ['dados.xlsx', 'DADOS DAF MARÇO DE 2023 - ATUAL 2026.xlsx'];
+
+      function carregarPlanilhaPadrao(index) {
+        if (index >= arquivosTentativos.length) {
+          document.getElementById('statusText').innerText = 'Nenhuma planilha padrão encontrada. Faça o upload manual do arquivo.';
+          return;
+        }
+
+        fetch(arquivosTentativos[index])
+          .then(response => {
+            if (!response.ok) throw new Error('Arquivo não encontrado');
+            return response.arrayBuffer();
+          })
+          .then(buffer => {
+            const data = new Uint8Array(buffer);
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            
+            // Garante leitura da aba "DADOS" ignorando as demais
+            const targetSheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[targetSheetName];
+            
+            rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            document.getElementById('statusText').innerText = `Aba "${targetSheetName}" carregada com sucesso! (${arquivosTentativos[index]})`;
+            processarDadosExcel(rawData);
+          })
+          .catch(() => carregarPlanilhaPadrao(index + 1));
+      }
+
+      carregarPlanilhaPadrao(0);
+    });
+
+    // --- FORMATAÇÃO DE DATAS ---
+    function formatarData(val) {
+      if (!val) return 'S/D';
+      if (val instanceof Date) {
+        return val.toLocaleDateString('pt-BR');
+      }
+      if (typeof val === 'number') {
+        const dateObj = XLSX.SSF.parse_date_code(val);
+        if (dateObj) {
+          const d = String(dateObj.d).padStart(2, '0');
+          const m = String(dateObj.m).padStart(2, '0');
+          return `${d}/${m}/${dateObj.y}`;
+        }
+      }
+      const strVal = String(val).trim();
+      if (strVal.includes('T')) {
+        const parts = strVal.split('T')[0].split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return strVal;
+    }
+
+    // --- REGEX NAS EVOLUÇÕES/HISTÓRICO (COLUNAS D e C) ---
     function extrairDadosEvolucao(texto) {
-      if (!texto || typeof texto !== 'string') return {};
+      if (!texto || typeof texto !== 'string') return {
+        fois: null, asha: null, grauDisfagia: 'Não informado',
+        sne: 'Não', tqt: 'Não', estase: 'Não', dieta: 'Não especificada',
+        eletro: 'Não', peso: '-', exercicios: 'Nenhum/Não especificado'
+      };
 
       const txt = texto.toLowerCase();
 
@@ -183,23 +242,23 @@
         grauDisfagia = 'Normal';
       }
 
-      // 4. SNE (Sonda Nasoentérica)
+      // 4. SNE
       const sne = (/sne\b|sonda\s*nasoent/i.test(texto)) ? 'Sim' : 'Não';
 
-      // 5. TQT (Traqueostomia)
+      // 5. TQT
       const tqt = (/tqt\b|traqueostomia|c[âa]nula/i.test(texto)) ? 'Sim' : 'Não';
 
-      // 6. Estase Salivar / Penetração Salivar
+      // 6. Estase Salivar
       let estase = 'Não';
       if (/estase\s*salivar|penetrap[çc][ãa]o\s*lar[íi]ngea\s*salivar|aspira[çc][ãa]o\s*de\s*saliva/i.test(texto)) {
         estase = 'Sim';
       }
 
-      // 7. Conduta Dieta (Sugiro dieta VO...)
+      // 7. Conduta Dieta
       const dietaMatch = texto.match(/sugiro\s*dieta\s*vo\s*([^.,;\n\r]+)/i) || texto.match(/dieta\s*vo\s*([^.,;\n\r]+)/i);
       const dieta = dietaMatch ? dietaMatch[1].trim() : 'VO mantida/não especificada';
 
-      // 8. Exercícios (Terapia Direta)
+      // 8. Exercícios
       let exercicios = [];
       if (txt.includes('masako')) exercicios.push('Masako');
       if (txt.includes('tvso')) exercicios.push('TVSO');
@@ -208,7 +267,7 @@
       if (txt.includes('shaker')) exercicios.push('Shaker');
       if (txt.includes('eletro') || txt.includes('eletrostimulação')) exercicios.push('Eletroterapia');
 
-      // 9. Eletro (Sim/Não)
+      // 9. Eletro
       const eletro = (/eletro|eletrostimula/i.test(texto)) ? 'Sim' : 'Não';
 
       // 10. Peso
@@ -229,7 +288,7 @@
       };
     }
 
-    // --- LEITURA DO ARQUIVO EXCEL ---
+    // --- LEITURA MANUAL VIA UPLOAD ---
     document.getElementById('fileInput').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -237,47 +296,56 @@
       const reader = new FileReader();
       reader.onload = function(evt) {
         const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheet = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheet];
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        
+        // Pega a aba 'DADOS'
+        const targetSheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[targetSheetName];
         
         rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        document.getElementById('statusText').innerText = `Aba "${targetSheetName}" do arquivo (${file.name}) processada!`;
         processarDadosExcel(rawData);
       };
       reader.readAsArrayBuffer(file);
     });
 
-    // --- PROCESSAMENTO E UNIFICAÇÃO DOS DADOS ---
+    // --- MAPEAMENTO DAS COLUNAS A, B, C, D e E ---
     function processarDadosExcel(rows) {
       parsedData = rows.map(row => {
-        // Mapeamento flexível de nomes de colunas
-        const evolucaoTexto = row['EVOLUÇÃO COMPLETA'] || row['EVOLUÇÃO'] || row['EVOLUCAO'] || row['HISTÓRICO'] || '';
-        const prontuario = row['PRONTUÁRIO'] || row['PRONTUARIO'] || row['Prontuário'] || 'S/N';
-        const dataAtendimento = row['DATA'] || row['DATA ATENDIMENTO'] || row['Data'] || 'S/D';
+        // Coluna A: DATA (primeiro atendimento)
+        const rawDataVal = row['DATA (primeiro atendimento)'] || row['DATA'] || row['Data'] || '';
+        const dataAtendimento = formatarData(rawDataVal);
+
+        // Coluna B: PRONT (Prontuário)
+        const prontuarioRaw = row['PRONT'] || row['PRONTUÁRIO'] || row['PRONTUARIO'] || 'S/N';
+        const prontuario = typeof prontuarioRaw === 'number' ? Math.floor(prontuarioRaw) : prontuarioRaw;
+
+        // Coluna C: HISTÓRICO & Coluna D: EVOLUÇÃO
+        const evolucaoTexto = row['EVOLUÇÃO'] || row['EVOLUCAO'] || row['EVOLUÇÃO COMPLETA'] || row['HISTÓRICO'] || '';
+
+        // Coluna E: IDADE
         const idade = row['IDADE'] || row['Idade'] || '-';
 
-        // Extrai via Regex
-        const dadosExtrai = extrairDadosEvolucao(evolucaoTexto);
+        // Análise por Regex no texto da evolução
+        const dadosExtraidos = extrairDadosEvolucao(evolucaoTexto);
 
         return {
           prontuario,
           data: dataAtendimento,
           idade,
-          ...dadosExtrai
+          ...dadosExtraidos
         };
       });
 
       atualizarInterface();
     }
 
-    // --- ATUALIZAÇÃO DO DASHBOARD ---
+    // --- RENDERIZAÇÃO E ATUALIZAÇÃO DOS KPIS ---
     function atualizarInterface() {
-      document.getElementById('statusText').innerText = `Planilha processada com sucesso! ${parsedData.length} registros analisados via Regex.`;
       const badge = document.getElementById('totalRecordsBadge');
       badge.innerText = `${parsedData.length} registros`;
       badge.classList.remove('hidden');
 
-      // KPIs
       document.getElementById('kpiTotal').innerText = parsedData.length;
 
       const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
@@ -294,7 +362,6 @@
       const mediaASHA = ashaValidos.length ? (ashaValidos.reduce((a,b) => a+b, 0) / ashaValidos.length).toFixed(1) : '-';
       document.getElementById('kpiASHA').innerText = mediaASHA;
 
-      // Renderização
       renderTabela(parsedData);
       renderGraficos();
     }
@@ -305,7 +372,7 @@
       tbody.innerHTML = '';
 
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="p-4 text-center text-slate-400">Nenhum dado encontrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="p-4 text-center text-slate-400">Nenhum dado encontrado na aba DADOS.</td></tr>`;
         return;
       }
 
@@ -340,12 +407,10 @@
 
     // --- GRÁFICOS ---
     function renderGraficos() {
-      // Destruir instâncias anteriores se existirem
       if (chartDisfagiaInst) chartDisfagiaInst.destroy();
       if (chartFOISInst) chartFOISInst.destroy();
       if (chartDispositivosInst) chartDispositivosInst.destroy();
 
-      // 1. Gráfico Grau Disfagia
       const contagemGrau = {};
       parsedData.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
 
@@ -361,7 +426,6 @@
         options: { responsive: true, maintainAspectRatio: false }
       });
 
-      // 2. Gráfico FOIS
       const contagemFOIS = { 'Nível 1':0, 'Nível 2':0, 'Nível 3':0, 'Nível 4':0, 'Nível 5':0, 'Nível 6':0, 'Nível 7':0 };
       parsedData.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
 
@@ -378,7 +442,6 @@
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
 
-      // 3. Gráfico Dispositivos
       const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
       const totalTQT = parsedData.filter(d => d.tqt === 'Sim').length;
       const totalEstase = parsedData.filter(d => d.estase === 'Sim').length;
@@ -398,7 +461,7 @@
       });
     }
 
-    // Busca na tabela
+    // BUSCA
     document.getElementById('tableSearch').addEventListener('input', function(e) {
       const query = e.target.value.toLowerCase();
       const filtered = parsedData.filter(d => 
