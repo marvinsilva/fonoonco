@@ -64,15 +64,26 @@
   </div>
 
   <!-- Cards KPI -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-    <!-- Card Atendimentos -->
+  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <!-- Card Total Atendimentos -->
     <div class="card p-4 flex items-center gap-4">
       <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl shrink-0">
-        <i class="fa-solid fa-users"></i>
+        <i class="fa-solid fa-clipboard-user"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Atend. (Únicos)</p>
-        <h3 id="kpiTotal" class="text-2xl font-bold text-slate-800">0 (0)</h3>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Atendimentos</p>
+        <h3 id="kpiTotalAtendimentos" class="text-2xl font-bold text-slate-800">0</h3>
+      </div>
+    </div>
+
+    <!-- Card Pacientes Únicos -->
+    <div class="card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-xl shrink-0">
+        <i class="fa-solid fa-hospital-user"></i>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Pacientes Únicos</p>
+        <h3 id="kpiPacientesUnicos" class="text-2xl font-bold text-slate-800">0</h3>
       </div>
     </div>
 
@@ -98,25 +109,25 @@
       </div>
     </div>
 
-    <!-- Card FOIS -->
+    <!-- Card Radioterapia -->
     <div class="card p-4 flex items-center gap-4">
-      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xl shrink-0">
-        <i class="fa-solid fa-utensils"></i>
+      <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-xl shrink-0">
+        <i class="fa-solid fa-radiation"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Média FOIS</p>
-        <h3 id="kpiFOIS" class="text-2xl font-bold text-slate-800">-</h3>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Em RT</p>
+        <h3 id="kpiRT" class="text-2xl font-bold text-slate-800">0%</h3>
       </div>
     </div>
 
-    <!-- Card ASHA -->
+    <!-- Card Média Peso -->
     <div class="card p-4 flex items-center gap-4">
-      <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-xl shrink-0">
-        <i class="fa-solid fa-chart-line"></i>
+      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-xl shrink-0">
+        <i class="fa-solid fa-weight-scale"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Média ASHA</p>
-        <h3 id="kpiASHA" class="text-2xl font-bold text-slate-800">-</h3>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Média Peso</p>
+        <h3 id="kpiPeso" class="text-2xl font-bold text-slate-800">-</h3>
       </div>
     </div>
   </div>
@@ -151,20 +162,8 @@
       <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-table text-indigo-500"></i> Registros Estruturados via Regex</h3>
       
       <!-- Controles Superiores de Busca -->
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- Filtro por Paciente -->
-        <select id="filterPacienteGlobal" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-          <option value="">Todos os Pacientes</option>
-        </select>
-
-        <!-- Filtro por Data -->
-        <select id="filterDataGlobal" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-          <option value="">Todas as Datas</option>
-        </select>
-
-        <!-- Busca por texto -->
-        <input type="text" id="tableSearch" placeholder="Buscar texto livre..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-full md:w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        
+      <div class="flex items-center gap-2">
+        <input type="text" id="tableSearch" placeholder="Buscar na tabela..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <button id="resetFilters" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-2 rounded-lg transition" title="Limpar Filtros">
           Limpar
         </button>
@@ -177,7 +176,9 @@
           <tr>
             <th class="p-3 align-top">Data</th>
             <th class="p-3 align-top">Paciente</th>
-            <th class="p-3 align-top">Idade</th>
+            <th class="p-3 align-top">Peso</th>
+            <th class="p-3 align-top">Tratamentos (RT/QT)</th>
+            <th class="p-3 align-top">Cirurgia (CX)</th>
             <th class="p-3 align-top">
               <div>Grau Disfagia</div>
               <select id="filterGrau" class="table-select filter-trigger">
@@ -195,26 +196,8 @@
               <div>FOIS</div>
               <select id="filterFOIS" class="table-select filter-trigger">
                 <option value="">Todos</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-              </select>
-            </th>
-            <th class="p-3 align-top text-center">
-              <div>ASHA</div>
-              <select id="filterASHA" class="table-select filter-trigger">
-                <option value="">Todos</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
               </select>
             </th>
             <th class="p-3 align-top text-center">
@@ -233,21 +216,15 @@
                 <option value="Não">Não</option>
               </select>
             </th>
-            <th class="p-3 align-top">
-              <div>Estase Salivar</div>
-              <select id="filterEstase" class="table-select filter-trigger">
-                <option value="">Todos</option>
-                <option value="Sim">Sim</option>
-                <option value="Não">Não</option>
-              </select>
-            </th>
+            <th class="p-3 align-top">Edema</th>
+            <th class="p-3 align-top">Dieta VO Atual</th>
             <th class="p-3 align-top">Conduta Dieta</th>
             <th class="p-3 align-top">Exercícios</th>
           </tr>
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200">
           <tr>
-            <td colspan="11" class="p-4 text-center text-slate-400">Carregando dados...</td>
+            <td colspan="13" class="p-4 text-center text-slate-400">Carregando dados...</td>
           </tr>
         </tbody>
       </table>
@@ -265,7 +242,6 @@
     let parsedData = [];
     let chartDisfagiaInst, chartFOISInst, chartDispositivosInst;
 
-    // --- CARREGAMENTO DA ABA 'DADOS' ---
     window.addEventListener('DOMContentLoaded', () => {
       const arquivosTentativos = ['dados.xlsx', 'DADOS DAF MARÇO DE 2023 - ATUAL 2026.xlsx'];
 
@@ -297,19 +273,12 @@
       carregarPlanilhaPadrao(0);
     });
 
-    // --- FORMATAÇÃO DE DATAS ---
     function formatarData(val) {
       if (!val) return 'S/D';
-      if (val instanceof Date) {
-        return val.toLocaleDateString('pt-BR');
-      }
+      if (val instanceof Date) return val.toLocaleDateString('pt-BR');
       if (typeof val === 'number') {
         const dateObj = XLSX.SSF.parse_date_code(val);
-        if (dateObj) {
-          const d = String(dateObj.d).padStart(2, '0');
-          const m = String(dateObj.m).padStart(2, '0');
-          return `${d}/${m}/${dateObj.y}`;
-        }
+        if (dateObj) return `${String(dateObj.d).padStart(2, '0')}/${String(dateObj.m).padStart(2, '0')}/${dateObj.y}`;
       }
       const strVal = String(val).trim();
       if (strVal.includes('T')) {
@@ -319,67 +288,92 @@
       return strVal;
     }
 
-    // --- EXTRAÇÃO VIA REGEX ---
+    // --- EXTRAÇÃO EXPANDIDA VIA REGEX ---
     function extrairDadosEvolucao(textoOriginal) {
       if (!textoOriginal || typeof textoOriginal !== 'string') return {
         fois: null, asha: null, grauDisfagia: 'Não informado',
         sne: 'Não', tqt: 'Não', estase: 'Não', dieta: 'Não especificada',
-        eletro: 'Não', peso: '-', exercicios: 'Nenhum/Não especificado'
+        eletro: 'Não', peso: '-', exercicios: 'Nenhum/Não especificado',
+        rt: 'Não', doseRT: '-', qt: 'Não', cirurgia: 'Não realizada/Não descrita',
+        dietaAtual: 'Não informada', edema: 'Não'
       };
 
       const texto = textoOriginal.replace(/\s+/g, ' ').trim();
 
-      // 1. FOIS
+      // 1. Peso
+      const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i) || texto.match(/([\d,.]+)\s*kg/i);
+      const peso = pesoMatch ? pesoMatch[1].replace(',', '.') : '-';
+
+      // 2. Radioterapia (RT) e Dose (Gy)
+      let rt = 'Não';
+      let doseRT = '-';
+      if (/radioterapia|\brt\b/i.test(texto)) {
+        rt = 'Sim';
+        const doseMatch = texto.match(/([\d,.]+)\s*gy/i) || texto.match(/dose[:\s]*([\d,.]+)/i);
+        if (doseMatch) doseRT = `${doseMatch[1]} Gy`;
+      }
+
+      // 3. Quimioterapia (QT)
+      const qt = (/quimioterapia|\bqt\b/i.test(texto)) ? 'Sim' : 'Não';
+
+      // 4. Cirurgias (CX)
+      let cirurgia = 'Não';
+      const cxMatch = texto.match(/(?:cirurgia|cx|procedimento\s*cir[úu]rgico)[:\s]*([^.,;\n\r]+)/i);
+      if (cxMatch) {
+        cirurgia = cxMatch[1].trim();
+      } else if (/ressec[çc][ãa]o|glossectomia|laringectomia|mandibulectomia|esvaziamento/i.test(texto)) {
+        const achadoCx = texto.match(/(?:glossectomia|laringectomia|mandibulectomia|esvaziamento\s*cervical|ressec[çc][ãa]o[^\.,;]*)/i);
+        cirurgia = achadoCx ? achadoCx[0] : 'Sim';
+      }
+
+      // 5. Dieta VO Atual (antes da alteração)
+      let dietaAtual = 'Não informada';
+      const dietaAtualMatch = texto.match(/(?:dieta\s*atual|ingesta\s*atual|recebendo\s*dieta|vo\s*atual|mant[ée]m\s*dieta)[:\s]*([^.,;\n\r]+)/i);
+      if (dietaAtualMatch) {
+        dietaAtual = dietaAtualMatch[1].trim();
+      } else if (/dieta\s*branda|dieta\s*pastosa|dieta\s*l[íi]quida|via\s*oral\s*livre/i.test(texto)) {
+        const achadoDieta = texto.match(/(?:dieta|via\s*oral)\s*(?:branda|pastosa|l[íi]quida|livre|zero)/i);
+        if (achadoDieta) dietaAtual = achadoDieta[0];
+      }
+
+      // 6. Edema
+      let edema = 'Não';
+      if (/edema/i.test(texto)) {
+        const edemaMatch = texto.match(/edema[^\.,;]*/i);
+        edema = edemaMatch ? edemaMatch[0] : 'Sim';
+      }
+
+      // 7. FOIS & ASHA
       const foisMatch = texto.match(/FOIS\s*[:\-]?\s*([1-7])/i);
       const fois = foisMatch ? parseInt(foisMatch[1]) : null;
 
-      // 2. ASHA NOMS
       const ashaMatch = texto.match(/ASHA(?:\s*NOMS)?\s*[:\-]?\s*([1-7])/i);
       const asha = ashaMatch ? parseInt(ashaMatch[1]) : null;
 
-      // 3. Grau de Disfagia
+      // 8. Grau Disfagia
       let grauDisfagia = 'Não informado';
-      if (/disfagia\s*orofar[íi]ngea\s*(leve\s*à\s*moderada|leve\s*a\s*moderada)/i.test(texto)) {
-        grauDisfagia = 'Leve a Moderada';
-      } else if (/disfagia\s*orofar[íi]ngea\s*(moderada\s*à\s*grave|moderada\s*a\s*grave)/i.test(texto)) {
-        grauDisfagia = 'Moderada a Grave';
-      } else if (/disfagia\s*orofar[íi]ngea\s*leve/i.test(texto) || /disfagia\s*leve/i.test(texto)) {
-        grauDisfagia = 'Leve';
-      } else if (/disfagia\s*orofar[íi]ngea\s*moderada/i.test(texto) || /disfagia\s*moderada/i.test(texto)) {
-        grauDisfagia = 'Moderada';
-      } else if (/disfagia\s*orofar[íi]ngea\s*grave/i.test(texto) || /disfagia\s*grave/i.test(texto)) {
-        grauDisfagia = 'Grave';
-      } else if (/sem\s*disfagia|degluti[çc][ãa]o\s*normal/i.test(texto)) {
-        grauDisfagia = 'Normal';
-      }
+      if (/disfagia\s*orofar[íi]ngea\s*(leve\s*à\s*moderada|leve\s*a\s*moderada)/i.test(texto)) grauDisfagia = 'Leve a Moderada';
+      else if (/disfagia\s*orofar[íi]ngea\s*(moderada\s*à\s*grave|moderada\s*a\s*grave)/i.test(texto)) grauDisfagia = 'Moderada a Grave';
+      else if (/disfagia\s*orofar[íi]ngea\s*leve/i.test(texto) || /disfagia\s*leve/i.test(texto)) grauDisfagia = 'Leve';
+      else if (/disfagia\s*orofar[íi]ngea\s*moderada/i.test(texto) || /disfagia\s*moderada/i.test(texto)) grauDisfagia = 'Moderada';
+      else if (/disfagia\s*orofar[íi]ngea\s*grave/i.test(texto) || /disfagia\s*grave/i.test(texto)) grauDisfagia = 'Grave';
+      else if (/sem\s*disfagia|degluti[çc][ãa]o\s*normal/i.test(texto)) grauDisfagia = 'Normal';
 
-      // 4. SNE
+      // Dispositivos
       const sne = (/sne\b|sonda\s*nasoent/i.test(texto)) ? 'Sim' : 'Não';
-
-      // 5. TQT
       const tqt = (/tqt\b|traqueostomia|c[âa]nula/i.test(texto)) ? 'Sim' : 'Não';
-
-      // 6. Estase Salivar
       const estase = /estase\s*salivar/i.test(texto) ? 'Sim' : 'Não';
 
-      // 7. Conduta Dieta (Refinado para capturar estritamente dietas e tratar o traço inicial)
+      // Conduta Dieta
       let dieta = 'Não especificada em Conduta';
       const condutaMatch = texto.match(/conduta(?:s|[\s\-]*fonoaudi[óo]lica|[\s\-]*fono)?\s*[:\-]\s*([^.,;\n\r]+)/i);
-      
       if (condutaMatch) {
-        let trechoConduta = condutaMatch[1].trim();
-        // Remove traços ou pontuações iniciais
-        trechoConduta = trechoConduta.replace(/^[\s\-:\.,;]+/, '').trim();
-
-        // Filtro de relevância para dietas e ingestão de alimentos
+        let trechoConduta = condutaMatch[1].trim().replace(/^[\s\-:\.,;]+/, '').trim();
         const regexTermosDieta = /\b(dieta|vo|via\s*oral|zero|branda|pastosa|l[íi]quid[ao]s?|espessad[ao]s?|pastoso|brand[ao]|livre|geral|brand|sonda|nasoenteral|sne|parenteral|enteral|fracionad[ao]|consist[êe]ncia)\b/i;
-        
-        if (regexTermosDieta.test(trechoConduta)) {
-          dieta = trechoConduta;
-        }
+        if (regexTermosDieta.test(trechoConduta)) dieta = trechoConduta;
       }
 
-      // 8. Exercícios
+      // Exercícios
       let exercicios = [];
       if (/masako/i.test(texto)) exercicios.push('Masako');
       if (/tvso\s*(com\s*)?lax\s*vox|lax\s*vox/i.test(texto)) exercicios.push('TVSO c/ Lax Vox');
@@ -393,33 +387,16 @@
       if (/hiperagudo/i.test(texto)) exercicios.push('Hiperagudo');
       if (/supra[- ]?gl[óo]tica/i.test(texto)) exercicios.push('Manobra Supraglótica');
       if (/degluti[çc][ãa]o\s*com\s*esfor[çc]o/i.test(texto)) exercicios.push('Deglutição c/ Esforço');
-      if (/degluti[çc][ãa]o\s*com\s*contra[- ]?resist[êe]ncia/i.test(texto)) exercicios.push('Deglutição c/ Contra-resist.');
-      if (/lateraliza[çc][ãa]o\s*de\s*l[íi]ngua/i.test(texto)) exercicios.push('Lateralização Língua');
-      if (/isometria\s*de\s*l[íi]ngua/i.test(texto)) exercicios.push('Isometria Língua');
-      if (/emiss[ãa]o\s*de\s*sons?\s*[\/\s]*[zs][\/\s]*[zs]|\b[zs]\s*\/\s*[zs]\b/i.test(texto)) exercicios.push('Sons /z/ /s/');
 
-      // 9. Eletro
       const eletro = (/eletro|eletrostimula/i.test(texto)) ? 'Sim' : 'Não';
 
-      // 10. Peso
-      const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i);
-      const peso = pesoMatch ? pesoMatch[1] : '-';
-
       return {
-        fois,
-        asha,
-        grauDisfagia,
-        sne,
-        tqt,
-        estase,
-        dieta,
-        eletro,
-        peso,
+        fois, asha, grauDisfagia, sne, tqt, estase, dieta, eletro, peso,
+        rt, doseRT, qt, cirurgia, dietaAtual, edema,
         exercicios: exercicios.length > 0 ? exercicios.join(', ') : 'Nenhum/Não especificado'
       };
     }
 
-    // --- UPLOAD MANUAL ---
     document.getElementById('fileInput').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -428,7 +405,6 @@
       reader.onload = function(evt) {
         const data = new Uint8Array(evt.target.result);
         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        
         const targetSheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
         const worksheet = workbook.Sheets[targetSheetName];
         
@@ -439,7 +415,6 @@
       reader.readAsArrayBuffer(file);
     });
 
-    // --- MAPEAMENTO E ANONIMIZAÇÃO ---
     function processarDadosExcel(rows) {
       const prontuarioMap = new Map();
       let contadorPaciente = 1;
@@ -448,10 +423,10 @@
         const rawDataVal = row['DATA (primeiro atendimento)'] || row['DATA'] || row['Data'] || '';
         const dataAtendimento = formatarData(rawDataVal);
 
-        const prontOriginal = row['PRONT'] || row['PRONTUÁRIO'] || row['PRONTUARIO'] || 'S/N';
+        const prontOriginal = String(row['PRONT'] || row['PRONTUÁRIO'] || row['PRONTUARIO'] || 'S/N').trim();
         
         let prontuarioAnonimo;
-        if (prontOriginal === 'S/N') {
+        if (prontOriginal === 'S/N' || prontOriginal === '') {
           prontuarioAnonimo = 'Paciente S/N';
         } else {
           if (!prontuarioMap.has(prontOriginal)) {
@@ -466,6 +441,7 @@
         const dadosExtraidos = extrairDadosEvolucao(evolucaoTexto);
 
         return {
+          prontuarioRaw: prontOriginal,
           prontuario: prontuarioAnonimo,
           data: dataAtendimento,
           idade,
@@ -473,38 +449,20 @@
         };
       });
 
-      preencherSelectsGlobais();
       atualizarInterface();
     }
 
-    // --- PREENCHER FILTROS DE PACIENTE E DATA ---
-    function preencherSelectsGlobais() {
-      const selectPacientes = document.getElementById('filterPacienteGlobal');
-      const selectDatas = document.getElementById('filterDataGlobal');
-
-      const pacientesUnicos = [...new Set(parsedData.map(d => d.prontuario))].sort();
-      const datasUnicas = [...new Set(parsedData.map(d => d.data))].sort();
-
-      selectPacientes.innerHTML = '<option value="">Todos os Pacientes</option>';
-      pacientesUnicos.forEach(p => {
-        selectPacientes.innerHTML += `<option value="${p}">${p}</option>`;
-      });
-
-      selectDatas.innerHTML = '<option value="">Todas as Datas</option>';
-      datasUnicas.forEach(d => {
-        selectDatas.innerHTML += `<option value="${d}">${d}</option>`;
-      });
-    }
-
-    // --- ATUALIZAÇÃO DA INTERFACE ---
     function atualizarInterface() {
       const badge = document.getElementById('totalRecordsBadge');
       badge.innerText = `${parsedData.length} registros`;
       badge.classList.remove('hidden');
 
-      // Total de Atendimentos e Pacientes Únicos
-      const pacientesUnicosTotal = new Set(parsedData.map(d => d.prontuario)).size;
-      document.getElementById('kpiTotal').innerText = `${parsedData.length} (${pacientesUnicosTotal})`;
+      document.getElementById('kpiTotalAtendimentos').innerText = parsedData.length;
+
+      const pacientesUnicos = new Set(
+        parsedData.map(d => d.prontuarioRaw).filter(p => p !== '' && p !== 'S/N')
+      ).size;
+      document.getElementById('kpiPacientesUnicos').innerText = pacientesUnicos;
 
       const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
       document.getElementById('kpiSNE').innerText = parsedData.length ? Math.round((totalSNE / parsedData.length) * 100) + '%' : '0%';
@@ -512,25 +470,23 @@
       const totalTQT = parsedData.filter(d => d.tqt === 'Sim').length;
       document.getElementById('kpiTQT').innerText = parsedData.length ? Math.round((totalTQT / parsedData.length) * 100) + '%' : '0%';
 
-      const foisValidos = parsedData.filter(d => d.fois !== null).map(d => d.fois);
-      const mediaFOIS = foisValidos.length ? (foisValidos.reduce((a,b) => a+b, 0) / foisValidos.length).toFixed(1) : '-';
-      document.getElementById('kpiFOIS').innerText = mediaFOIS;
+      const totalRT = parsedData.filter(d => d.rt === 'Sim').length;
+      document.getElementById('kpiRT').innerText = parsedData.length ? Math.round((totalRT / parsedData.length) * 100) + '%' : '0%';
 
-      const ashaValidos = parsedData.filter(d => d.asha !== null).map(d => d.asha);
-      const mediaASHA = ashaValidos.length ? (ashaValidos.reduce((a,b) => a+b, 0) / ashaValidos.length).toFixed(1) : '-';
-      document.getElementById('kpiASHA').innerText = mediaASHA;
+      const pesosValidos = parsedData.map(d => parseFloat(d.peso)).filter(p => !isNaN(p));
+      const mediaPeso = pesosValidos.length ? (pesosValidos.reduce((a,b) => a+b, 0) / pesosValidos.length).toFixed(1) + ' kg' : '-';
+      document.getElementById('kpiPeso').innerText = mediaPeso;
 
       aplicarFiltros();
       renderGraficos();
     }
 
-    // --- TABELA ---
     function renderTabela(data) {
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
 
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="p-4 text-center text-slate-400">Nenhum registro atende aos filtros selecionados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" class="p-4 text-center text-slate-400">Nenhum registro atende aos filtros selecionados.</td></tr>`;
         return;
       }
 
@@ -538,16 +494,22 @@
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
 
+        const tratamentoTxt = [];
+        if (item.rt === 'Sim') tratamentoTxt.push(`RT (${item.doseRT})`);
+        if (item.qt === 'Sim') tratamentoTxt.push('QT');
+
         tr.innerHTML = `
           <td class="p-3 font-medium text-slate-700">${item.data}</td>
           <td class="p-3 font-semibold text-indigo-600">${item.prontuario}</td>
-          <td class="p-3">${item.idade}</td>
+          <td class="p-3 font-medium">${item.peso !== '-' ? item.peso + ' kg' : '-'}</td>
+          <td class="p-3">${tratamentoTxt.length > 0 ? tratamentoTxt.join(' + ') : 'Nenhum'}</td>
+          <td class="p-3 truncate max-w-xs" title="${item.cirurgia}">${item.cirurgia}</td>
           <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getGrauBadgeClass(item.grauDisfagia)}">${item.grauDisfagia}</span></td>
           <td class="p-3 text-center font-bold">${item.fois || '-'}</td>
-          <td class="p-3 text-center font-bold">${item.asha || '-'}</td>
           <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.sne === 'Sim' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${item.sne}</span></td>
           <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.tqt === 'Sim' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'}">${item.tqt}</span></td>
-          <td class="p-3 font-semibold ${item.estase === 'Sim' ? 'text-purple-700' : 'text-slate-500'}">${item.estase}</td>
+          <td class="p-3">${item.edema}</td>
+          <td class="p-3 truncate max-w-xs" title="${item.dietaAtual}">${item.dietaAtual}</td>
           <td class="p-3 truncate max-w-xs" title="${item.dieta}">${item.dieta}</td>
           <td class="p-3 text-xs text-slate-500">${item.exercicios}</td>
         `;
@@ -563,7 +525,6 @@
       return 'bg-slate-100 text-slate-600';
     }
 
-    // --- GRÁFICOS ---
     function renderGraficos() {
       if (chartDisfagiaInst) chartDisfagiaInst.destroy();
       if (chartFOISInst) chartFOISInst.destroy();
@@ -575,7 +536,6 @@
       const labelsDisfagia = Object.keys(contagemGrau);
       const dataDisfagia = Object.values(contagemGrau);
 
-      // Ocultar por padrão a fatia "Não informado" no gráfico de rosca
       const indexNaoInformado = labelsDisfagia.indexOf('Não informado');
 
       chartDisfagiaInst = new Chart(document.getElementById('chartDisfagia'), {
@@ -625,7 +585,6 @@
         }
       });
 
-      // Ocultar fidedignamente o elemento inicial se ele for "Não informado"
       if (indexNaoInformado !== -1) {
         chartDisfagiaInst.toggleDataVisibility(indexNaoInformado);
         chartDisfagiaInst.update();
@@ -666,35 +625,22 @@
       });
     }
 
-    // --- LÓGICA DE FILTRAGEM COMBINADA ---
     function aplicarFiltros() {
       const query = document.getElementById('tableSearch').value.toLowerCase();
-      const valPaciente = document.getElementById('filterPacienteGlobal').value;
-      const valData = document.getElementById('filterDataGlobal').value;
 
       const valGrau = document.getElementById('filterGrau').value;
       const valFOIS = document.getElementById('filterFOIS').value;
-      const valASHA = document.getElementById('filterASHA').value;
       const valSNE = document.getElementById('filterSNE').value;
       const valTQT = document.getElementById('filterTQT').value;
-      const valEstase = document.getElementById('filterEstase').value;
 
       const filtrados = parsedData.filter(d => {
-        // Filtros globais (Paciente e Data)
-        if (valPaciente && d.prontuario !== valPaciente) return false;
-        if (valData && d.data !== valData) return false;
-
-        // Filtros drop-down de cabeçalho da tabela
         if (valGrau && d.grauDisfagia !== valGrau) return false;
         if (valFOIS && (d.fois === null || d.fois.toString() !== valFOIS)) return false;
-        if (valASHA && (d.asha === null || d.asha.toString() !== valASHA)) return false;
         if (valSNE && d.sne !== valSNE) return false;
         if (valTQT && d.tqt !== valTQT) return false;
-        if (valEstase && d.estase !== valEstase) return false;
 
-        // Filtro por texto livre
         if (query) {
-          const textoRow = `${d.prontuario} ${d.grauDisfagia} ${d.dieta} ${d.exercicios}`.toLowerCase();
+          const textoRow = `${d.data} ${d.prontuario} ${d.grauDisfagia} ${d.dieta} ${d.dietaAtual} ${d.cirurgia} ${d.exercicios}`.toLowerCase();
           if (!textoRow.includes(query)) return false;
         }
 
@@ -704,19 +650,11 @@
       renderTabela(filtrados);
     }
 
-    // Event Listeners dos Filtros
-    document.querySelectorAll('.filter-trigger').forEach(el => {
-      el.addEventListener('change', aplicarFiltros);
-    });
-    document.getElementById('filterPacienteGlobal').addEventListener('change', aplicarFiltros);
-    document.getElementById('filterDataGlobal').addEventListener('change', aplicarFiltros);
+    document.querySelectorAll('.filter-trigger').forEach(el => el.addEventListener('change', aplicarFiltros));
     document.getElementById('tableSearch').addEventListener('input', aplicarFiltros);
 
-    // Botão Limpar Filtros
     document.getElementById('resetFilters').addEventListener('click', () => {
       document.getElementById('tableSearch').value = '';
-      document.getElementById('filterPacienteGlobal').value = '';
-      document.getElementById('filterDataGlobal').value = '';
       document.querySelectorAll('.filter-trigger').forEach(select => select.value = '');
       aplicarFiltros();
     });
