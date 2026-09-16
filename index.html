@@ -41,7 +41,7 @@
   <header class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-800"><i class="fa-solid fa-stethoscope text-indigo-600 mr-2"></i>Dashboard Fono Onco</h1>
-      <p class="text-slate-500 text-sm">Análise de dados de atendimentos unificados.</p>
+      <p class="text-slate-500 text-sm">Análise de dados de atendimentos e cruzamentos clínicos.</p>
     </div>
 
     <!-- Upload de Planilha -->
@@ -116,8 +116,15 @@
     </div>
   </div>
 
-  <!-- Gráficos -->
+  <!-- Gráficos Demográficos e Funcionais (Linha 1) -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="card p-5">
+      <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-users text-indigo-500"></i> Distribuição por Faixa Etária</h3>
+      <div class="relative h-64">
+        <canvas id="chartFaixaEtaria"></canvas>
+      </div>
+    </div>
+
     <div class="card p-5">
       <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-indigo-500"></i> Grau de Disfagia</h3>
       <div class="relative h-64">
@@ -131,11 +138,23 @@
         <canvas id="chartFOIS"></canvas>
       </div>
     </div>
+  </div>
+
+  <!-- Gráficos de Cruzamento Clínico (Linha 2) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="card p-5">
+      <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2"><i class="fa-solid fa-scalpel text-indigo-500"></i> Cirurgia vs. Grau de Disfagia</h3>
+      <p class="text-xs text-slate-400 mb-4">Proporção de severidade de disfagia por tipo de cirurgia</p>
+      <div class="relative h-72">
+        <canvas id="chartCirurgiaDisfagia"></canvas>
+      </div>
+    </div>
 
     <div class="card p-5">
-      <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-notes-medical text-indigo-500"></i> Dispositivos / Achados</h3>
-      <div class="relative h-64">
-        <canvas id="chartDispositivos"></canvas>
+      <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2"><i class="fa-solid fa-radiation text-indigo-500"></i> Dose de Radioterapia (Gy) vs. Disfagia</h3>
+      <p class="text-xs text-slate-400 mb-4">Impacto da carga de radiação na severidade da disfagia</p>
+      <div class="relative h-72">
+        <canvas id="chartRTDisfagia"></canvas>
       </div>
     </div>
   </div>
@@ -159,6 +178,7 @@
           <tr>
             <th class="p-3 align-top">Data</th>
             <th class="p-3 align-top">Paciente</th>
+            <th class="p-3 align-top">Idade</th>
             <th class="p-3 align-top">Peso</th>
             <th class="p-3 align-top">Tratamentos (RT/QT)</th>
             <th class="p-3 align-top">Cirurgia (CX)</th>
@@ -207,7 +227,7 @@
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200">
           <tr>
-            <td colspan="13" class="p-4 text-center text-slate-400">Nenhum dado carregado. Por favor, selecione uma planilha Excel acima.</td>
+            <td colspan="14" class="p-4 text-center text-slate-400">Nenhum dado carregado. Por favor, selecione uma planilha Excel acima.</td>
           </tr>
         </tbody>
       </table>
@@ -222,9 +242,11 @@
   <script>
     let rawData = [];
     let parsedData = [];
+    let chartFaixaEtariaInst = null;
     let chartDisfagiaInst = null;
     let chartFOISInst = null;
-    let chartDispositivosInst = null;
+    let chartCirurgiaDisfagiaInst = null;
+    let chartRTDisfagiaInst = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       const arquivosTentativos = ['dados.xlsx', 'DADOS DAF MARÇO DE 2023 - ATUAL 2026.xlsx'];
@@ -275,7 +297,7 @@
         fois: null, asha: null, grauDisfagia: 'Não informado',
         sne: 'Não', tqt: 'Não', estase: 'Não', dieta: 'Não especificada',
         eletro: 'Não', peso: '-', exercicios: 'Nenhum/Não especificado',
-        rt: 'Não', doseRT: '-', qt: 'Não', cirurgia: 'Não realizada/Não descrita',
+        rt: 'Não', doseNum: 0, doseRT: '-', qt: 'Não', cirurgia: 'Não realizada/Não descrita',
         dietaAtual: 'Não informada', edema: 'Não'
       };
 
@@ -286,21 +308,28 @@
 
       let rt = 'Não';
       let doseRT = '-';
+      let doseNum = 0;
       if (/radioterapia|\brt\b/i.test(texto)) {
         rt = 'Sim';
         const doseMatch = texto.match(/([\d,.]+)\s*gy/i) || texto.match(/dose[:\s]*([\d,.]+)/i);
-        if (doseMatch) doseRT = `${doseMatch[1]} Gy`;
+        if (doseMatch) {
+          doseNum = parseFloat(doseMatch[1].replace(',', '.'));
+          doseRT = `${doseNum} Gy`;
+        }
       }
 
       const qt = (/quimioterapia|\bqt\b/i.test(texto)) ? 'Sim' : 'Não';
 
-      let cirurgia = 'Não';
-      const cxMatch = texto.match(/(?:cirurgia|cx|procedimento\s*cir[úu]rgico)[:\s]*([^.,;\n\r]+)/i);
-      if (cxMatch) {
-        cirurgia = cxMatch[1].trim();
-      } else if (/ressec[çc][ãa]o|glossectomia|laringectomia|mandibulectomia|esvaziamento/i.test(texto)) {
-        const achadoCx = texto.match(/(?:glossectomia|laringectomia|mandibulectomia|esvaziamento\s*cervical|ressec[çc][ãa]o[^\.,;]*)/i);
-        cirurgia = achadoCx ? achadoCx[0] : 'Sim';
+      let cirurgia = 'Não realizada';
+      if (/glossectomia/i.test(texto)) cirurgia = 'Glossectomia';
+      else if (/laringectomia\s*total/i.test(texto)) cirurgia = 'Laringectomia Total';
+      else if (/laringectomia/i.test(texto)) cirurgia = 'Laringectomia Parcial';
+      else if (/mandibulectomia/i.test(texto)) cirurgia = 'Mandibulectomia';
+      else if (/esvaziamento\s*cervical/i.test(texto)) cirurgia = 'Esvaziamento Cervical';
+      else if (/ressec[çc][ãa]o/i.test(texto)) cirurgia = 'Ressecção de Lesão';
+      else {
+        const cxMatch = texto.match(/(?:cirurgia|cx)[:\s]*([^.,;\n\r]+)/i);
+        if (cxMatch) cirurgia = cxMatch[1].trim();
       }
 
       let dietaAtual = 'Não informada';
@@ -362,7 +391,7 @@
 
       return {
         fois, asha, grauDisfagia, sne, tqt, estase, dieta, eletro, peso,
-        rt, doseRT, qt, cirurgia, dietaAtual, edema,
+        rt, doseNum, doseRT, qt, cirurgia, dietaAtual, edema,
         exercicios: exercicios.length > 0 ? exercicios.join(', ') : 'Nenhum/Não especificado'
       };
     }
@@ -416,7 +445,9 @@
         }
 
         const evolucaoTexto = row['EVOLUÇÃO'] || row['EVOLUCAO'] || row['EVOLUÇÃO COMPLETA'] || row['HISTÓRICO'] || '';
-        const idade = row['IDADE'] || row['Idade'] || '-';
+        const rawIdade = parseInt(row['IDADE'] || row['Idade'] || row['idade']);
+        const idade = isNaN(rawIdade) ? null : rawIdade;
+
         const dadosExtraidos = extrairDadosEvolucao(String(evolucaoTexto));
 
         return {
@@ -460,7 +491,7 @@
       tbody.innerHTML = '';
 
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" class="p-4 text-center text-slate-400">Nenhum registro atende aos filtros selecionados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="p-4 text-center text-slate-400">Nenhum registro atende aos filtros selecionados.</td></tr>`;
         return;
       }
 
@@ -475,6 +506,7 @@
         tr.innerHTML = `
           <td class="p-3 font-medium text-slate-700">${item.data}</td>
           <td class="p-3 font-semibold text-indigo-600">${item.prontuario}</td>
+          <td class="p-3">${item.idade ? item.idade + ' anos' : '-'}</td>
           <td class="p-3 font-medium">${item.peso !== '-' ? item.peso + ' kg' : '-'}</td>
           <td class="p-3">${tratamentoTxt.length > 0 ? tratamentoTxt.join(' + ') : 'Nenhum'}</td>
           <td class="p-3 truncate max-w-xs" title="${item.cirurgia}">${item.cirurgia}</td>
@@ -500,11 +532,37 @@
     }
 
     function renderGraficos(dadosParaExibir = parsedData) {
+      if (chartFaixaEtariaInst) chartFaixaEtariaInst.destroy();
       if (chartDisfagiaInst) chartDisfagiaInst.destroy();
       if (chartFOISInst) chartFOISInst.destroy();
-      if (chartDispositivosInst) chartDispositivosInst.destroy();
+      if (chartCirurgiaDisfagiaInst) chartCirurgiaDisfagiaInst.destroy();
+      if (chartRTDisfagiaInst) chartRTDisfagiaInst.destroy();
 
-      // 1. Grau de Disfagia
+      // 1. Faixa Etária
+      const faixas = { '<18 anos': 0, '18-39 anos': 0, '40-59 anos': 0, '60-74 anos': 0, '75+ anos': 0, 'Não informada': 0 };
+      dadosParaExibir.forEach(d => {
+        if (!d.idade) faixas['Não informada']++;
+        else if (d.idade < 18) faixas['<18 anos']++;
+        else if (d.idade <= 39) faixas['18-39 anos']++;
+        else if (d.idade <= 59) faixas['40-59 anos']++;
+        else if (d.idade <= 74) faixas['60-74 anos']++;
+        else faixas['75+ anos']++;
+      });
+
+      chartFaixaEtariaInst = new Chart(document.getElementById('chartFaixaEtaria'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(faixas),
+          datasets: [{
+            label: 'Nº de Pacientes',
+            data: Object.values(faixas),
+            backgroundColor: '#4f46e5'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      // 2. Grau de Disfagia
       const contagemGrau = {};
       dadosParaExibir.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
 
@@ -518,7 +576,7 @@
           labels: labelsDisfagia,
           datasets: [{
             data: dataDisfagia,
-            backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b', '#8b5cf6']
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#d97706', '#ef4444', '#b91c1c', '#94a3b8']
           }]
         },
         options: {
@@ -564,7 +622,7 @@
         chartDisfagiaInst.update();
       }
 
-      // 2. FOIS
+      // 3. FOIS
       const contagemFOIS = { 'Nível 1':0, 'Nível 2':0, 'Nível 3':0, 'Nível 4':0, 'Nível 5':0, 'Nível 6':0, 'Nível 7':0 };
       dadosParaExibir.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
 
@@ -575,33 +633,69 @@
           datasets: [{
             label: 'Nº Pacientes',
             data: Object.values(contagemFOIS),
-            backgroundColor: '#6366f1'
+            backgroundColor: '#0284c7'
           }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
 
+      // 4. Cirurgia vs. Grau de Disfagia (Stacked Bar)
+      const tiposCirurgias = ['Glossectomia', 'Laringectomia Total', 'Laringectomia Parcial', 'Esvaziamento Cervical', 'Mandibulectomia', 'Ressecção de Lesão'];
+      const grausDisfagia = ['Normal', 'Leve', 'Leve a Moderada', 'Moderada', 'Moderada a Grave', 'Grave'];
       
-      // 3. Dispositivos / Achados
-      const totalSNE = dadosParaExibir.filter(d => d.sne === 'Sim').length;
-      const totalTQT = dadosParaExibir.filter(d => d.tqt === 'Sim').length;
-      const totalRT = dadosParaExibir.filter(d => d.rt === 'Sim').length;
-      const totalQT = dadosParaExibir.filter(d => d.qt === 'Sim').length;
-      const totalEdema = dadosParaExibir.filter(d => d.edema !== 'Não').length;
-      const totalEstase = dadosParaExibir.filter(d => d.estase === 'Sim').length;
-      const totalEletro = dadosParaExibir.filter(d => d.eletro === 'Sim').length;
+      const matrixCirurgia = tiposCirurgias.map(cx => {
+        return grausDisfagia.map(grau => {
+          return dadosParaExibir.filter(d => d.cirurgia.toLowerCase().includes(cx.toLowerCase()) && d.grauDisfagia === grau).length;
+        });
+      });
 
-      chartDispositivosInst = new Chart(document.getElementById('chartDispositivos'), {
+      chartCirurgiaDisfagiaInst = new Chart(document.getElementById('chartCirurgiaDisfagia'), {
         type: 'bar',
         data: {
-          labels: ['SNE', 'TQT', 'Radioterapia (RT)', 'Quimioterapia (QT)', 'Edema', 'Estase Salivar', 'Eletroterapia'],
-          datasets: [{
-            label: 'Total de Ocorrências',
-            data: [totalSNE, totalTQT, totalRT, totalQT, totalEdema, totalEstase, totalEletro],
-            backgroundColor: ['#f59e0b', '#ef4444', '#ea580c', '#8b5cf6', '#06b6d4', '#64748b', '#10b981']
-          }]
+          labels: tiposCirurgias,
+          datasets: grausDisfagia.map((grau, index) => ({
+            label: grau,
+            data: matrixCirurgia.map(row => row[index]),
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#d97706', '#ef4444', '#b91c1c'][index]
+          }))
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true } }
+        }
+      });
+
+      // 5. Dose RT vs. Grau de Disfagia (Stacked Bar)
+      const faixasRT = ['Sem RT', '< 50 Gy', '50 - 66 Gy', '> 66 Gy'];
+      const matrixRT = faixasRT.map(faixa => {
+        return grausDisfagia.map(grau => {
+          return dadosParaExibir.filter(d => {
+            if (d.grauDisfagia !== grau) return false;
+            if (faixa === 'Sem RT' && d.rt === 'Não') return true;
+            if (faixa === '< 50 Gy' && d.rt === 'Sim' && d.doseNum > 0 && d.doseNum < 50) return true;
+            if (faixa === '50 - 66 Gy' && d.rt === 'Sim' && d.doseNum >= 50 && d.doseNum <= 66) return true;
+            if (faixa === '> 66 Gy' && d.rt === 'Sim' && d.doseNum > 66) return true;
+            return false;
+          }).length;
+        });
+      });
+
+      chartRTDisfagiaInst = new Chart(document.getElementById('chartRTDisfagia'), {
+        type: 'bar',
+        data: {
+          labels: faixasRT,
+          datasets: grausDisfagia.map((grau, index) => ({
+            label: grau,
+            data: matrixRT.map(row => row[index]),
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#d97706', '#ef4444', '#b91c1c'][index]
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true } }
+        }
       });
     }
 
