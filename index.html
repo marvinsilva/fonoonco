@@ -303,8 +303,15 @@
 
       const texto = textoOriginal.replace(/\s+/g, ' ').trim();
 
+      // Ajuste de peso: Ignora valores menores que 40kg (provável descrição de perda ponderal)
       const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i) || texto.match(/([\d,.]+)\s*kg/i);
-      const peso = pesoMatch ? pesoMatch[1].replace(',', '.') : '-';
+      let peso = '-';
+      if (pesoMatch) {
+        const valPeso = parseFloat(pesoMatch[1].replace(',', '.'));
+        if (!isNaN(valPeso) && valPeso >= 40) {
+          peso = valPeso.toString();
+        }
+      }
 
       let rt = 'Não';
       let doseRT = '-';
@@ -506,7 +513,7 @@
         tr.innerHTML = `
           <td class="p-3 font-medium text-slate-700">${item.data}</td>
           <td class="p-3 font-semibold text-indigo-600">${item.prontuario}</td>
-          <td class="p-3">${item.idade ? item.idade + ' anos' : '-'}</td>
+          <td class="p-3">${item.idade ? item.idade : '-'}</td>
           <td class="p-3 font-medium">${item.peso !== '-' ? item.peso + ' kg' : '-'}</td>
           <td class="p-3">${tratamentoTxt.length > 0 ? tratamentoTxt.join(' + ') : 'Nenhum'}</td>
           <td class="p-3 truncate max-w-xs" title="${item.cirurgia}">${item.cirurgia}</td>
@@ -538,11 +545,10 @@
       if (chartCirurgiaDisfagiaInst) chartCirurgiaDisfagiaInst.destroy();
       if (chartRTDisfagiaInst) chartRTDisfagiaInst.destroy();
 
-      // 1. Faixa Etária
-      const faixas = { '<18 anos': 0, '18-39 anos': 0, '40-59 anos': 0, '60-74 anos': 0, '75+ anos': 0, 'Não informada': 0 };
+      // 1. Faixa Etária (Removido <18 anos)
+      const faixas = { '18-39 anos': 0, '40-59 anos': 0, '60-74 anos': 0, '75+ anos': 0, 'Não informada': 0 };
       dadosParaExibir.forEach(d => {
         if (!d.idade) faixas['Não informada']++;
-        else if (d.idade < 18) faixas['<18 anos']++;
         else if (d.idade <= 39) faixas['18-39 anos']++;
         else if (d.idade <= 59) faixas['40-59 anos']++;
         else if (d.idade <= 74) faixas['60-74 anos']++;
