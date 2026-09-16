@@ -12,7 +12,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- SheetJS CDN (para ler planilhas Excel) -->
+  <!-- SheetJS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -58,14 +58,13 @@
   <div id="statusAlert" class="mb-6 card p-4 border-l-4 border-indigo-500 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <i class="fa-solid fa-circle-info text-indigo-500 text-xl"></i>
-      <span id="statusText" class="text-slate-700 text-sm font-medium">Buscando base de dados padrão (aba DADOS)...</span>
+      <span id="statusText" class="text-slate-700 text-sm font-medium">Aguardando envio de planilha Excel...</span>
     </div>
     <span id="totalRecordsBadge" class="hidden bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">0 registros</span>
   </div>
 
   <!-- Cards KPI -->
   <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-    <!-- Card Total Atendimentos -->
     <div class="card p-4 flex items-center gap-4">
       <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl shrink-0">
         <i class="fa-solid fa-clipboard-user"></i>
@@ -76,7 +75,6 @@
       </div>
     </div>
 
-    <!-- Card Pacientes Únicos -->
     <div class="card p-4 flex items-center gap-4">
       <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-xl shrink-0">
         <i class="fa-solid fa-hospital-user"></i>
@@ -87,7 +85,6 @@
       </div>
     </div>
 
-    <!-- Card SNE -->
     <div class="card p-4 flex items-center gap-4">
       <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center text-xl shrink-0">
         <i class="fa-solid fa-syringe"></i>
@@ -98,7 +95,6 @@
       </div>
     </div>
 
-    <!-- Card TQT -->
     <div class="card p-4 flex items-center gap-4">
       <div class="w-12 h-12 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xl shrink-0">
         <i class="fa-solid fa-head-side-mask"></i>
@@ -109,7 +105,6 @@
       </div>
     </div>
 
-    <!-- Card Radioterapia -->
     <div class="card p-4 flex items-center gap-4">
       <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-xl shrink-0">
         <i class="fa-solid fa-radiation"></i>
@@ -145,12 +140,11 @@
     </div>
   </div>
 
-  <!-- Tabela de Dados Extraídos -->
+  <!-- Tabela de Dados -->
   <div class="card p-5 mb-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
       <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-table text-indigo-500"></i> Registros Estruturados via Regex</h3>
       
-      <!-- Controles Superiores de Busca -->
       <div class="flex items-center gap-2">
         <input type="text" id="tableSearch" placeholder="Buscar na tabela..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <button id="resetFilters" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-2 rounded-lg transition" title="Limpar Filtros">
@@ -213,7 +207,7 @@
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200">
           <tr>
-            <td colspan="13" class="p-4 text-center text-slate-400">Carregando dados...</td>
+            <td colspan="13" class="p-4 text-center text-slate-400">Nenhum dado carregado. Por favor, selecione uma planilha Excel acima.</td>
           </tr>
         </tbody>
       </table>
@@ -225,41 +219,40 @@
     <p>Desenvolvido por <strong>Fgo Marvin Azevedo</strong></p>
   </footer>
 
-  <!-- Script de Processamento e Lógica -->
   <script>
     let rawData = [];
     let parsedData = [];
-    let chartDisfagiaInst, chartFOISInst, chartDispositivosInst;
+    let chartDisfagiaInst = null;
+    let chartFOISInst = null;
+    let chartDispositivosInst = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       const arquivosTentativos = ['dados.xlsx', 'DADOS DAF MARÇO DE 2023 - ATUAL 2026.xlsx'];
 
-      function carregarPlanilhaPadrao(index) {
+      function tentarCarregarAutomatico(index) {
         if (index >= arquivosTentativos.length) {
-          document.getElementById('statusText').innerText = 'Nenhuma planilha padrão encontrada. Faça o upload manual do arquivo.';
+          document.getElementById('statusText').innerText = 'Selecione sua planilha no botão "Carregar Planilha Excel" acima para iniciar.';
           return;
         }
 
         fetch(arquivosTentativos[index])
-          .then(response => {
-            if (!response.ok) throw new Error('Arquivo não encontrado');
-            return response.arrayBuffer();
+          .then(res => {
+            if (!res.ok) throw new Error('Não encontrado');
+            return res.arrayBuffer();
           })
           .then(buffer => {
             const data = new Uint8Array(buffer);
             const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            const sheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
+            rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
             
-            const targetSheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[targetSheetName];
-            
-            rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-            document.getElementById('statusText').innerText = `Aba "${targetSheetName}" carregada com sucesso! (${arquivosTentativos[index]})`;
+            document.getElementById('statusText').innerText = `Planilha "${arquivosTentativos[index]}" carregada automaticamente!`;
             processarDadosExcel(rawData);
           })
-          .catch(() => carregarPlanilhaPadrao(index + 1));
+          .catch(() => tentarCarregarAutomatico(index + 1));
       }
 
-      carregarPlanilhaPadrao(0);
+      tentarCarregarAutomatico(0);
     });
 
     function formatarData(val) {
@@ -274,7 +267,7 @@
         const parts = strVal.split('T')[0].split('-');
         if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
       }
-      return strVal;
+      return strVal || 'S/D';
     }
 
     function extrairDadosEvolucao(textoOriginal) {
@@ -288,11 +281,9 @@
 
       const texto = textoOriginal.replace(/\s+/g, ' ').trim();
 
-      // Peso
       const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i) || texto.match(/([\d,.]+)\s*kg/i);
       const peso = pesoMatch ? pesoMatch[1].replace(',', '.') : '-';
 
-      // Radioterapia (RT) e Dose (Gy)
       let rt = 'Não';
       let doseRT = '-';
       if (/radioterapia|\brt\b/i.test(texto)) {
@@ -301,10 +292,8 @@
         if (doseMatch) doseRT = `${doseMatch[1]} Gy`;
       }
 
-      // Quimioterapia (QT)
       const qt = (/quimioterapia|\bqt\b/i.test(texto)) ? 'Sim' : 'Não';
 
-      // Cirurgias (CX)
       let cirurgia = 'Não';
       const cxMatch = texto.match(/(?:cirurgia|cx|procedimento\s*cir[úu]rgico)[:\s]*([^.,;\n\r]+)/i);
       if (cxMatch) {
@@ -314,7 +303,6 @@
         cirurgia = achadoCx ? achadoCx[0] : 'Sim';
       }
 
-      // Dieta VO Atual
       let dietaAtual = 'Não informada';
       const dietaAtualMatch = texto.match(/(?:dieta\s*atual|ingesta\s*atual|recebendo\s*dieta|vo\s*atual|mant[ée]m\s*dieta)[:\s]*([^.,;\n\r]+)/i);
       if (dietaAtualMatch) {
@@ -324,21 +312,18 @@
         if (achadoDieta) dietaAtual = achadoDieta[0];
       }
 
-      // Edema
       let edema = 'Não';
       if (/edema/i.test(texto)) {
-        const edemaMatch = texto.match/edema[^\.,;]*/i);
+        const edemaMatch = texto.match(/edema[^\.,;]*/i);
         edema = edemaMatch ? edemaMatch[0] : 'Sim';
       }
 
-      // FOIS & ASHA
       const foisMatch = texto.match(/FOIS\s*[:\-]?\s*([1-7])/i);
       const fois = foisMatch ? parseInt(foisMatch[1]) : null;
 
       const ashaMatch = texto.match(/ASHA(?:\s*NOMS)?\s*[:\-]?\s*([1-7])/i);
       const asha = ashaMatch ? parseInt(ashaMatch[1]) : null;
 
-      // Grau Disfagia
       let grauDisfagia = 'Não informado';
       if (/disfagia\s*orofar[íi]ngea\s*(leve\s*à\s*moderada|leve\s*a\s*moderada)/i.test(texto)) grauDisfagia = 'Leve a Moderada';
       else if (/disfagia\s*orofar[íi]ngea\s*(moderada\s*à\s*grave|moderada\s*a\s*grave)/i.test(texto)) grauDisfagia = 'Moderada a Grave';
@@ -347,12 +332,10 @@
       else if (/disfagia\s*orofar[íi]ngea\s*grave/i.test(texto) || /disfagia\s*grave/i.test(texto)) grauDisfagia = 'Grave';
       else if (/sem\s*disfagia|degluti[çc][ãa]o\s*normal/i.test(texto)) grauDisfagia = 'Normal';
 
-      // Dispositivos
       const sne = (/sne\b|sonda\s*nasoent/i.test(texto)) ? 'Sim' : 'Não';
       const tqt = (/tqt\b|traqueostomia|c[âa]nula/i.test(texto)) ? 'Sim' : 'Não';
       const estase = /estase\s*salivar/i.test(texto) ? 'Sim' : 'Não';
 
-      // Conduta Dieta
       let dieta = 'Não especificada em Conduta';
       const condutaMatch = texto.match(/conduta(?:s|[\s\-]*fonoaudi[óo]lica|[\s\-]*fono)?\s*[:\-]\s*([^.,;\n\r]+)/i);
       if (condutaMatch) {
@@ -361,7 +344,6 @@
         if (regexTermosDieta.test(trechoConduta)) dieta = trechoConduta;
       }
 
-      // Exercícios
       let exercicios = [];
       if (/masako/i.test(texto)) exercicios.push('Masako');
       if (/tvso\s*(com\s*)?lax\s*vox|lax\s*vox/i.test(texto)) exercicios.push('TVSO c/ Lax Vox');
@@ -391,19 +373,28 @@
 
       const reader = new FileReader();
       reader.onload = function(evt) {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        const targetSheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[targetSheetName];
-        
-        rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-        document.getElementById('statusText').innerText = `Aba "${targetSheetName}" do arquivo (${file.name}) processada!`;
-        processarDadosExcel(rawData);
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const sheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
+          
+          rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+          document.getElementById('statusText').innerText = `Planilha "${file.name}" (Aba: ${sheetName}) carregada com sucesso!`;
+          processarDadosExcel(rawData);
+        } catch (err) {
+          alert('Erro ao ler a planilha Excel. Verifique se o formato do arquivo é válido.');
+          console.error(err);
+        }
       };
       reader.readAsArrayBuffer(file);
     });
 
     function processarDadosExcel(rows) {
+      if (!rows || rows.length === 0) {
+        document.getElementById('statusText').innerText = 'A planilha carregada não contém registros.';
+        return;
+      }
+
       const prontuarioMap = new Map();
       let contadorPaciente = 1;
 
@@ -414,7 +405,7 @@
         const prontOriginal = String(row['PRONT'] || row['PRONTUÁRIO'] || row['PRONTUARIO'] || 'S/N').trim();
         
         let prontuarioAnonimo;
-        if (prontOriginal === 'S/N' || prontOriginal === '') {
+        if (prontOriginal === 'S/N' || prontOriginal === '' || prontOriginal === 'undefined') {
           prontuarioAnonimo = 'Paciente S/N';
         } else {
           if (!prontuarioMap.has(prontOriginal)) {
@@ -426,7 +417,7 @@
 
         const evolucaoTexto = row['EVOLUÇÃO'] || row['EVOLUCAO'] || row['EVOLUÇÃO COMPLETA'] || row['HISTÓRICO'] || '';
         const idade = row['IDADE'] || row['Idade'] || '-';
-        const dadosExtraidos = extrairDadosEvolucao(evolucaoTexto);
+        const dadosExtraidos = extrairDadosEvolucao(String(evolucaoTexto));
 
         return {
           prontuarioRaw: prontOriginal,
@@ -448,7 +439,7 @@
       document.getElementById('kpiTotalAtendimentos').innerText = parsedData.length;
 
       const pacientesUnicos = new Set(
-        parsedData.map(d => d.prontuarioRaw).filter(p => p !== '' && p !== 'S/N')
+        parsedData.map(d => d.prontuarioRaw).filter(p => p !== '' && p !== 'S/N' && p !== 'undefined')
       ).size;
       document.getElementById('kpiPacientesUnicos').innerText = pacientesUnicos;
 
@@ -513,7 +504,7 @@
       if (chartFOISInst) chartFOISInst.destroy();
       if (chartDispositivosInst) chartDispositivosInst.destroy();
 
-      // 1. Gráfico Grau Disfagia
+      // 1. Grau de Disfagia
       const contagemGrau = {};
       dadosParaExibir.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
 
@@ -573,7 +564,7 @@
         chartDisfagiaInst.update();
       }
 
-      // 2. Gráfico FOIS
+      // 2. FOIS
       const contagemFOIS = { 'Nível 1':0, 'Nível 2':0, 'Nível 3':0, 'Nível 4':0, 'Nível 5':0, 'Nível 6':0, 'Nível 7':0 };
       dadosParaExibir.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
 
@@ -590,7 +581,7 @@
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
 
-      // 3. Gráfico Dispositivos / Achados / Tratamentos
+      // 3. Dispositivos / Achados
       const totalSNE = dadosParaExibir.filter(d => d.sne === 'Sim').length;
       const totalTQT = dadosParaExibir.filter(d => d.tqt === 'Sim').length;
       const totalRT = dadosParaExibir.filter(d => d.rt === 'Sim').length;
@@ -602,42 +593,14 @@
       chartDispositivosInst = new Chart(document.getElementById('chartDispositivos'), {
         type: 'bar',
         data: {
-          labels: [
-            'SNE', 
-            'TQT', 
-            'Radioterapia (RT)', 
-            'Quimioterapia (QT)', 
-            'Edema', 
-            'Estase Salivar', 
-            'Eletroterapia'
-          ],
+          labels: ['SNE', 'TQT', 'Radioterapia (RT)', 'Quimioterapia (QT)', 'Edema', 'Estase Salivar', 'Eletroterapia'],
           datasets: [{
             label: 'Total de Ocorrências',
-            data: [
-              totalSNE, 
-              totalTQT, 
-              totalRT, 
-              totalQT, 
-              totalEdema, 
-              totalEstase, 
-              totalEletro
-            ],
-            backgroundColor: [
-              '#f59e0b',
-              '#ef4444',
-              '#ea580c',
-              '#8b5cf6',
-              '#06b6d4',
-              '#64748b',
-              '#10b981'
-            ]
+            data: [totalSNE, totalTQT, totalRT, totalQT, totalEdema, totalEstase, totalEletro],
+            backgroundColor: ['#f59e0b', '#ef4444', '#ea580c', '#8b5cf6', '#06b6d4', '#64748b', '#10b981']
           }]
         },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: false } } 
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
     }
 
