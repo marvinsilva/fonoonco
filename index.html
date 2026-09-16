@@ -288,7 +288,7 @@
 
       const texto = textoOriginal.replace(/\s+/g, ' ').trim();
 
-      // Peso (mantido para exibição na tabela se houver)
+      // Peso
       const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i) || texto.match(/([\d,.]+)\s*kg/i);
       const peso = pesoMatch ? pesoMatch[1].replace(',', '.') : '-';
 
@@ -327,7 +327,7 @@
       // Edema
       let edema = 'Não';
       if (/edema/i.test(texto)) {
-        const edemaMatch = texto.match(/edema[^\.,;]*/i);
+        const edemaMatch = texto.match/edema[^\.,;]*/i);
         edema = edemaMatch ? edemaMatch[0] : 'Sim';
       }
 
@@ -462,7 +462,6 @@
       document.getElementById('kpiRT').innerText = parsedData.length ? Math.round((totalRT / parsedData.length) * 100) + '%' : '0%';
 
       aplicarFiltros();
-      renderGraficos();
     }
 
     function renderTabela(data) {
@@ -509,17 +508,17 @@
       return 'bg-slate-100 text-slate-600';
     }
 
-    function renderGraficos() {
+    function renderGraficos(dadosParaExibir = parsedData) {
       if (chartDisfagiaInst) chartDisfagiaInst.destroy();
       if (chartFOISInst) chartFOISInst.destroy();
       if (chartDispositivosInst) chartDispositivosInst.destroy();
 
+      // 1. Gráfico Grau Disfagia
       const contagemGrau = {};
-      parsedData.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
+      dadosParaExibir.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
 
       const labelsDisfagia = Object.keys(contagemGrau);
       const dataDisfagia = Object.values(contagemGrau);
-
       const indexNaoInformado = labelsDisfagia.indexOf('Não informado');
 
       chartDisfagiaInst = new Chart(document.getElementById('chartDisfagia'), {
@@ -574,8 +573,9 @@
         chartDisfagiaInst.update();
       }
 
+      // 2. Gráfico FOIS
       const contagemFOIS = { 'Nível 1':0, 'Nível 2':0, 'Nível 3':0, 'Nível 4':0, 'Nível 5':0, 'Nível 6':0, 'Nível 7':0 };
-      parsedData.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
+      dadosParaExibir.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
 
       chartFOISInst = new Chart(document.getElementById('chartFOIS'), {
         type: 'bar',
@@ -590,22 +590,54 @@
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
 
-      const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
-      const totalTQT = parsedData.filter(d => d.tqt === 'Sim').length;
-      const totalEstase = parsedData.filter(d => d.estase === 'Sim').length;
-      const totalEletro = parsedData.filter(d => d.eletro === 'Sim').length;
+      // 3. Gráfico Dispositivos / Achados / Tratamentos
+      const totalSNE = dadosParaExibir.filter(d => d.sne === 'Sim').length;
+      const totalTQT = dadosParaExibir.filter(d => d.tqt === 'Sim').length;
+      const totalRT = dadosParaExibir.filter(d => d.rt === 'Sim').length;
+      const totalQT = dadosParaExibir.filter(d => d.qt === 'Sim').length;
+      const totalEdema = dadosParaExibir.filter(d => d.edema !== 'Não').length;
+      const totalEstase = dadosParaExibir.filter(d => d.estase === 'Sim').length;
+      const totalEletro = dadosParaExibir.filter(d => d.eletro === 'Sim').length;
 
       chartDispositivosInst = new Chart(document.getElementById('chartDispositivos'), {
         type: 'bar',
         data: {
-          labels: ['SNE', 'TQT', 'Estase Salivar', 'Eletroterapia'],
+          labels: [
+            'SNE', 
+            'TQT', 
+            'Radioterapia (RT)', 
+            'Quimioterapia (QT)', 
+            'Edema', 
+            'Estase Salivar', 
+            'Eletroterapia'
+          ],
           datasets: [{
             label: 'Total de Ocorrências',
-            data: [totalSNE, totalTQT, totalEstase, totalEletro],
-            backgroundColor: ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
+            data: [
+              totalSNE, 
+              totalTQT, 
+              totalRT, 
+              totalQT, 
+              totalEdema, 
+              totalEstase, 
+              totalEletro
+            ],
+            backgroundColor: [
+              '#f59e0b',
+              '#ef4444',
+              '#ea580c',
+              '#8b5cf6',
+              '#06b6d4',
+              '#64748b',
+              '#10b981'
+            ]
           }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: false } } 
+        }
       });
     }
 
@@ -632,6 +664,7 @@
       });
 
       renderTabela(filtrados);
+      renderGraficos(filtrados);
     }
 
     document.querySelectorAll('.filter-trigger').forEach(el => el.addEventListener('change', aplicarFiltros));
