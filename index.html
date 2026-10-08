@@ -110,7 +110,7 @@
         <i class="fa-solid fa-radiation"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Em RT</p>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Em RT/RDT</p>
         <h3 id="kpiRT" class="text-2xl font-bold text-slate-800">0%</h3>
       </div>
     </div>
@@ -313,10 +313,11 @@
         }
       }
 
+      // Detecção de Radioterapia estendida: aceita radioterapia, RT, RDT, RTX ou presença de "Gy"
       let rt = 'Não';
       let doseRT = '-';
       let doseNum = 0;
-      if (/radioterapia|\brt\b/i.test(texto)) {
+      if (/radioterapia|\brt\b|\brdt\b|\brtx\b|\bgy\b/i.test(texto)) {
         rt = 'Sim';
         const doseMatch = texto.match(/([\d,.]+)\s*gy/i) || texto.match(/dose[:\s]*([\d,.]+)/i);
         if (doseMatch) {
@@ -545,7 +546,7 @@
       if (chartCirurgiaDisfagiaInst) chartCirurgiaDisfagiaInst.destroy();
       if (chartRTDisfagiaInst) chartRTDisfagiaInst.destroy();
 
-      // 1. Faixa Etária (Removido <18 anos)
+      // 1. Faixa Etária
       const faixas = { '18-39 anos': 0, '40-59 anos': 0, '60-74 anos': 0, '75+ anos': 0, 'Não informada': 0 };
       dadosParaExibir.forEach(d => {
         if (!d.idade) faixas['Não informada']++;
