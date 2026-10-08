@@ -245,7 +245,7 @@
   </footer>
 
   <script>
-    const URL_GOOGLE_DRIVE = https://docs.google.com/spreadsheets/d/e/2PACX-1vS0aJmpyCdUGtx_9OGGStGSajhLeU8dhOx_DlZTSnRsXKdcNkj7NL3yxHtQr3jHUWasqdFZYR7GmrJU/pub?gid=0&single=true&output=csv;
+    const URL_GOOGLE_DRIVE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS0aJmpyCdUGtx_9OGGStGSajhLeU8dhOx_DlZTSnRsXKdcNkj7NL3yxHtQr3jHUWasqdFZYR7GmrJU/pub?gid=0&single=true&output=csv';
 
     let rawData = [];
     let parsedData = [];
@@ -261,10 +261,9 @@
 
     function carregarDadosGoogleDrive() {
       const statusText = document.getElementById('statusText');
-      statusText.innerText = 'Buscando atualização do Google Drive...';
+      if (statusText) statusText.innerText = 'Buscando atualização do Google Drive...';
 
       if (!URL_GOOGLE_DRIVE || URL_GOOGLE_DRIVE.includes('COLE_SEU_LINK')) {
-        // Fallback para arquivo local se a URL do Drive ainda não tiver sido configurada
         tentarCarregarLocal(['dados.xlsx', 'DADOS DAF MARÇO DE 2023 - ATUAL 2026.xlsx'], 0);
         return;
       }
@@ -281,7 +280,7 @@
           rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
 
           const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-          statusText.innerText = `Dados sincronizados do Google Drive com sucesso (às ${agora})!`;
+          if (statusText) statusText.innerText = `Dados sincronizados do Google Drive com sucesso (às ${agora})!`;
           processarDadosExcel(rawData);
         })
         .catch(err => {
