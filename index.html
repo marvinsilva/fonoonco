@@ -259,6 +259,64 @@
       carregarDadosGoogleDrive();
     });
 
+    function normalizarChave(str) {
+      if (!str) return '';
+      return String(str)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+    }
+
+    function obterValorColuna(row, termosBusca) {
+      if (!row || typeof row !== 'object') return '';
+      const keys = Object.keys(row);
+
+      for (const termo of termosBusca) {
+        const termoNorm = normalizarChave(termo);
+        const keyMatch = keys.find(k => normalizarChave(k).includes(termoNorm));
+        if (keyMatch && row[keyMatch] !== undefined && row[keyMatch] !== null && String(row[keyMatch]).trim() !== '') {
+          return String(row[keyMatch]).trim();
+        }
+      }
+      return '';
+    }
+
+    // Unifica o conteúdo de TODAS as colunas de evolução/histórico da linha (ex: Coluna C + Coluna D)
+    function obterTextoEvolucaoCompleto(row) {
+      if (!row || typeof row !== 'object') return '';
+
+      const keys = Object.keys(row);
+      const termosEvolucao = ['evolucao', 'historico', 'descricao', 'observacao', 'avaliacao', 'conduta', 'atendimento', 'queixa'];
+      
+      let textosUnificados = [];
+
+      // 1. Coleta os textos de colunas cujos nomes combinem com os termos clínicos
+      keys.forEach(key => {
+        const keyNorm = normalizarChave(key);
+        const val = String(row[key] || '').trim();
+        
+        const ehEvolucao = termosEvolucao.some(termo => keyNorm.includes(termo));
+        if (ehEvolucao && val !== '') {
+          textosUnificados.push(val);
+        }
+      });
+
+      // 2. Se nenhuma coluna tiver nome reconhecido, junta todas as colunas da linha que tenham texto clínico longo (> 15 caracteres)
+      if (textosUnificados.length === 0) {
+        keys.forEach(key => {
+          const val = String(row[key] || '').trim();
+          // Ignora colunas que são apenas datas ou números pequenos (idade/prontuário)
+          if (val.length > 15 && !/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+            textosUnificados.push(val);
+          }
+        });
+      }
+
+      // Une todos os blocos de texto com um espaço em branco
+      return textosUnificados.join(' ');
+    }
+
     function carregarDadosGoogleDrive() {
       const statusText = document.getElementById('statusText');
       if (statusText) statusText.innerText = 'Buscando atualização do Google Drive...';
@@ -275,7 +333,7 @@
         })
         .then(buffer => {
           const data = new Uint8Array(buffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true, codepage: 65001 });
           const sheetName = workbook.SheetNames[0];
           rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
 
@@ -302,7 +360,7 @@
         })
         .then(buffer => {
           const data = new Uint8Array(buffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true, codepage: 65001 });
           const sheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
           rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
           
@@ -338,15 +396,17 @@
 
       const texto = textoOriginal.replace(/\s+/g, ' ').trim();
 
+      // Peso
       const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i) || texto.match(/([\d,.]+)\s*kg/i);
       let peso = '-';
       if (pesoMatch) {
         const valPeso = parseFloat(pesoMatch[1].replace(',', '.'));
-        if (!isNaN(valPeso) && valPeso >= 40) {
+        if (!isNaN(valPeso) && valPeso >= 30 && valPeso <= 250) {
           peso = valPeso.toString();
         }
       }
 
+      // RT / Dose
       let rt = 'Não';
       let doseRT = '-';
       let doseNum = 0;
@@ -359,8 +419,10 @@
         }
       }
 
+      // QT
       const qt = (/quimioterapia|\bqt\b/i.test(texto)) ? 'Sim' : 'Não';
 
+      // Cirurgia
       let cirurgia = 'Não realizada';
       if (/glossectomia/i.test(texto)) cirurgia = 'Glossectomia';
       else if (/laringectomia\s*total/i.test(texto)) cirurgia = 'Laringectomia Total';
@@ -373,6 +435,7 @@
         if (cxMatch) cirurgia = cxMatch[1].trim();
       }
 
+      // Dieta Atual
       let dietaAtual = 'Não informada';
       const dietaAtualMatch = texto.match(/(?:dieta\s*atual|ingesta\s*atual|recebendo\s*dieta|vo\s*atual|mant[ée]m\s*dieta)[:\s]*([^.,;\n\r]+)/i);
       if (dietaAtualMatch) {
@@ -382,30 +445,36 @@
         if (achadoDieta) dietaAtual = achadoDieta[0];
       }
 
+      // Edema
       let edema = 'Não';
       if (/edema/i.test(texto)) {
         const edemaMatch = texto.match(/edema[^\.,;]*/i);
         edema = edemaMatch ? edemaMatch[0] : 'Sim';
       }
 
-      const foisMatch = texto.match(/FOIS\s*[:\-]?\s*([1-7])/i);
+      // FOIS
+      const foisMatch = texto.match(/FOIS\s*[:\-=]?\s*([1-7])\b/i) || texto.match(/n[íi]vel\s*([1-7])\b/i);
       const fois = foisMatch ? parseInt(foisMatch[1]) : null;
 
-      const ashaMatch = texto.match(/ASHA(?:\s*NOMS)?\s*[:\-]?\s*([1-7])/i);
+      // ASHA
+      const ashaMatch = texto.match(/ASHA(?:\s*NOMS)?\s*[:\-=]?\s*([1-7])\b/i);
       const asha = ashaMatch ? parseInt(ashaMatch[1]) : null;
 
+      // Grau de Disfagia
       let grauDisfagia = 'Não informado';
-      if (/disfagia\s*orofar[íi]ngea\s*(leve\s*à\s*moderada|leve\s*a\s*moderada)/i.test(texto)) grauDisfagia = 'Leve a Moderada';
-      else if (/disfagia\s*orofar[íi]ngea\s*(moderada\s*à\s*grave|moderada\s*a\s*grave)/i.test(texto)) grauDisfagia = 'Moderada a Grave';
-      else if (/disfagia\s*orofar[íi]ngea\s*leve/i.test(texto) || /disfagia\s*leve/i.test(texto)) grauDisfagia = 'Leve';
-      else if (/disfagia\s*orofar[íi]ngea\s*moderada/i.test(texto) || /disfagia\s*moderada/i.test(texto)) grauDisfagia = 'Moderada';
-      else if (/disfagia\s*orofar[íi]ngea\s*grave/i.test(texto) || /disfagia\s*grave/i.test(texto)) grauDisfagia = 'Grave';
-      else if (/sem\s*disfagia|degluti[çc][ãa]o\s*normal/i.test(texto)) grauDisfagia = 'Normal';
+      if (/disfagia\s*(orofar[íi]ngea\s*)?(leve\s*a\s*moderada|leve\s*[àa/]\s*moderada|leve-moderada)/i.test(texto)) grauDisfagia = 'Leve a Moderada';
+      else if (/disfagia\s*(orofar[íi]ngea\s*)?(moderada\s*a\s*grave|moderada\s*[àa/]\s*grave|moderada-grave)/i.test(texto)) grauDisfagia = 'Moderada a Grave';
+      else if (/disfagia\s*(orofar[íi]ngea\s*)?leve\b/i.test(texto)) grauDisfagia = 'Leve';
+      else if (/disfagia\s*(orofar[íi]ngea\s*)?moderada\b/i.test(texto)) grauDisfagia = 'Moderada';
+      else if (/disfagia\s*(orofar[íi]ngea\s*)?(grave|severa)\b/i.test(texto)) grauDisfagia = 'Grave';
+      else if (/sem\s*disfagia|degluti[çc][ãa]o\s*normal|aus[êe]ncia\s*de\s*disfagia|disfagia\s*ausente/i.test(texto)) grauDisfagia = 'Normal';
 
-      const sne = (/sne\b|sonda\s*nasoent/i.test(texto)) ? 'Sim' : 'Não';
-      const tqt = (/tqt\b|traqueostomia|c[âa]nula/i.test(texto)) ? 'Sim' : 'Não';
+      // SNE e TQT
+      const sne = (/\bsne\b|sonda\s*nasoent|nasoenteral|\bgtt\b|gastrostomia|sonda\s*enteral/i.test(texto)) ? 'Sim' : 'Não';
+      const tqt = (/\btqt\b|traqueostomia|c[âa]nula\s*traqueal/i.test(texto)) ? 'Sim' : 'Não';
       const estase = /estase\s*salivar/i.test(texto) ? 'Sim' : 'Não';
 
+      // Conduta / Dieta Prescrita
       let dieta = 'Não especificada em Conduta';
       const condutaMatch = texto.match(/conduta(?:s|[\s\-]*fonoaudi[óo]lica|[\s\-]*fono)?\s*[:\-]\s*([^.,;\n\r]+)/i);
       if (condutaMatch) {
@@ -414,6 +483,7 @@
         if (regexTermosDieta.test(trechoConduta)) dieta = trechoConduta;
       }
 
+      // Exercícios
       let exercicios = [];
       if (/masako/i.test(texto)) exercicios.push('Masako');
       if (/tvso\s*(com\s*)?lax\s*vox|lax\s*vox/i.test(texto)) exercicios.push('TVSO c/ Lax Vox');
@@ -445,7 +515,7 @@
       reader.onload = function(evt) {
         try {
           const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true, codepage: 65001 });
           const sheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
           
           rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
@@ -469,10 +539,10 @@
       let contadorPaciente = 1;
 
       parsedData = rows.map(row => {
-        const rawDataVal = row['DATA (primeiro atendimento)'] || row['DATA'] || row['Data'] || '';
+        const rawDataVal = obterValorColuna(row, ['DATA (primeiro atendimento)', 'DATA', 'Data', 'ATENDIMENTO']);
         const dataAtendimento = formatarData(rawDataVal);
 
-        const prontOriginal = String(row['PRONT'] || row['PRONTUÁRIO'] || row['PRONTUARIO'] || 'S/N').trim();
+        const prontOriginal = obterValorColuna(row, ['PRONT', 'PRONTUÁRIO', 'PRONTUARIO', 'REGISTRO', 'PACIENTE']) || 'S/N';
         
         let prontuarioAnonimo;
         if (prontOriginal === 'S/N' || prontOriginal === '' || prontOriginal === 'undefined') {
@@ -485,11 +555,14 @@
           prontuarioAnonimo = prontuarioMap.get(prontOriginal);
         }
 
-        const evolucaoTexto = row['EVOLUÇÃO'] || row['EVOLUCAO'] || row['EVOLUÇÃO COMPLETA'] || row['HISTÓRICO'] || '';
-        const rawIdade = parseInt(row['IDADE'] || row['Idade'] || row['idade']);
+        // Obtém e junta o texto de TODAS as colunas clínicas (C + D)
+        const evolucaoTexto = obterTextoEvolucaoCompleto(row);
+
+        const rawIdadeStr = obterValorColuna(row, ['IDADE', 'Idade', 'idade']);
+        const rawIdade = parseInt(rawIdadeStr);
         const idade = isNaN(rawIdade) ? null : rawIdade;
 
-        const dadosExtraidos = extrairDadosEvolucao(String(evolucaoTexto));
+        const dadosExtraidos = extrairDadosEvolucao(evolucaoTexto);
 
         return {
           prontuarioRaw: prontOriginal,
