@@ -44,26 +44,24 @@
       <p class="text-slate-500 text-sm">Análise de dados de atendimentos e cruzamentos clínicos.</p>
     </div>
 
-    <!-- Upload de Planilha / Atualização -->
+    <!-- Upload de Planilha Local -->
     <div class="flex items-center gap-3">
-      <button id="btnReloadDrive" onclick="carregarDadosGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow">
-        <i class="fa-solid fa-rotate-right"></i>
-        <span>Sincronizar Google Drive</span>
-      </button>
-
       <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow">
         <i class="fa-solid fa-file-excel"></i>
-        <span>Arquivo Local</span>
+        <span>Carregar Planilha Excel</span>
         <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
       </label>
     </div>
   </header>
 
-  <!-- Status / Filtros -->
-  <div id="statusAlert" class="mb-6 card p-4 border-l-4 border-indigo-500 flex items-center justify-between">
+  <!-- Status / Informação de Privacidade -->
+  <div id="statusAlert" class="mb-6 card p-4 border-l-4 border-emerald-500 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <i id="statusIcon" class="fa-solid fa-circle-info text-indigo-500 text-xl"></i>
-      <span id="statusText" class="text-slate-700 text-sm font-medium">Carregando dados em tempo real...</span>
+      <i id="statusIcon" class="fa-solid fa-user-shield text-emerald-600 text-xl"></i>
+      <div>
+        <span id="statusText" class="text-slate-700 text-sm font-medium block">Ambiente Seguro (100% Local)</span>
+        <span class="text-slate-400 text-xs">Nenhum dado do seu paciente sai do seu computador. Selecione um arquivo para começar.</span>
+      </div>
     </div>
     <span id="totalRecordsBadge" class="hidden bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">0 registros</span>
   </div>
@@ -232,7 +230,7 @@
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200">
           <tr>
-            <td colspan="14" class="p-4 text-center text-slate-400">Carregando dados da planilha...</td>
+            <td colspan="14" class="p-4 text-center text-slate-400">Aguardando seleção de planilha local. Clique em "Carregar Planilha Excel" acima.</td>
           </tr>
         </tbody>
       </table>
@@ -245,8 +243,6 @@
   </footer>
 
   <script>
-    const URL_GOOGLE_DRIVE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS0aJmpyCdUGtx_9OGGStGSajhLeU8dhOx_DlZTSnRsXKdcNkj7NL3yxHtQr3jHUWasqdFZYR7GmrJU/pub?gid=0&single=true&output=csv';
-
     let rawData = [];
     let parsedData = [];
     let chartFaixaEtariaInst = null;
@@ -254,10 +250,6 @@
     let chartFOISInst = null;
     let chartCirurgiaDisfagiaInst = null;
     let chartRTDisfagiaInst = null;
-
-    window.addEventListener('DOMContentLoaded', () => {
-      carregarDadosGoogleDrive();
-    });
 
     function normalizarChave(str) {
       if (!str) return '';
@@ -282,7 +274,6 @@
       return '';
     }
 
-    // Unifica o conteúdo de TODAS as colunas de evolução/histórico da linha (ex: Coluna C + Coluna D)
     function obterTextoEvolucaoCompleto(row) {
       if (!row || typeof row !== 'object') return '';
 
@@ -291,7 +282,6 @@
       
       let textosUnificados = [];
 
-      // 1. Coleta os textos de colunas cujos nomes combinem com os termos clínicos
       keys.forEach(key => {
         const keyNorm = normalizarChave(key);
         const val = String(row[key] || '').trim();
@@ -302,72 +292,16 @@
         }
       });
 
-      // 2. Se nenhuma coluna tiver nome reconhecido, junta todas as colunas da linha que tenham texto clínico longo (> 15 caracteres)
       if (textosUnificados.length === 0) {
         keys.forEach(key => {
           const val = String(row[key] || '').trim();
-          // Ignora colunas que são apenas datas ou números pequenos (idade/prontuário)
           if (val.length > 15 && !/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
             textosUnificados.push(val);
           }
         });
       }
 
-      // Une todos os blocos de texto com um espaço em branco
       return textosUnificados.join(' ');
-    }
-
-    function carregarDadosGoogleDrive() {
-      const statusText = document.getElementById('statusText');
-      if (statusText) statusText.innerText = 'Buscando atualização do Google Drive...';
-
-      if (!URL_GOOGLE_DRIVE || URL_GOOGLE_DRIVE.includes('COLE_SEU_LINK')) {
-        tentarCarregarLocal(['dados.xlsx', 'DADOS DAF MARÇO DE 2023 - ATUAL 2026.xlsx'], 0);
-        return;
-      }
-
-      fetch(URL_GOOGLE_DRIVE)
-        .then(res => {
-          if (!res.ok) throw new Error('Falha ao baixar dados do Drive');
-          return res.arrayBuffer();
-        })
-        .then(buffer => {
-          const data = new Uint8Array(buffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true, codepage: 65001 });
-          const sheetName = workbook.SheetNames[0];
-          rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-
-          const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-          if (statusText) statusText.innerText = `Dados sincronizados do Google Drive com sucesso (às ${agora})!`;
-          processarDadosExcel(rawData);
-        })
-        .catch(err => {
-          console.warn('Erro no Google Drive, tentando cópia local...', err);
-          tentarCarregarLocal(['dados.xlsx', 'DADOS DAF MARÇO DE 2023 - ATUAL 2026.xlsx'], 0);
-        });
-    }
-
-    function tentarCarregarLocal(arquivos, index) {
-      if (index >= arquivos.length) {
-        document.getElementById('statusText').innerText = 'Cole a URL do Google Drive no código ou carregue um arquivo local.';
-        return;
-      }
-
-      fetch(arquivos[index])
-        .then(res => {
-          if (!res.ok) throw new Error('Não encontrado');
-          return res.arrayBuffer();
-        })
-        .then(buffer => {
-          const data = new Uint8Array(buffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true, codepage: 65001 });
-          const sheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
-          rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-          
-          document.getElementById('statusText').innerText = `Carregado arquivo local "${arquivos[index]}". Configure a URL do Drive para dados em tempo real.`;
-          processarDadosExcel(rawData);
-        })
-        .catch(() => tentarCarregarLocal(arquivos, index + 1));
     }
 
     function formatarData(val) {
@@ -396,12 +330,12 @@
 
       const texto = textoOriginal.replace(/\s+/g, ' ').trim();
 
-      // Peso
+      // Peso >= 40kg
       const pesoMatch = texto.match(/peso[:\s]*([\d,.]+)\s*kg/i) || texto.match(/([\d,.]+)\s*kg/i);
       let peso = '-';
       if (pesoMatch) {
         const valPeso = parseFloat(pesoMatch[1].replace(',', '.'));
-        if (!isNaN(valPeso) && valPeso >= 30 && valPeso <= 250) {
+        if (!isNaN(valPeso) && valPeso >= 40 && valPeso <= 250) {
           peso = valPeso.toString();
         }
       }
@@ -519,7 +453,7 @@
           const sheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
           
           rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-          document.getElementById('statusText').innerText = `Planilha "${file.name}" carregada manualmente com sucesso!`;
+          document.getElementById('statusText').innerText = `Planilha "${file.name}" processada com sucesso no seu navegador.`;
           processarDadosExcel(rawData);
         } catch (err) {
           alert('Erro ao ler a planilha Excel. Verifique se o formato do arquivo é válido.');
@@ -555,7 +489,6 @@
           prontuarioAnonimo = prontuarioMap.get(prontOriginal);
         }
 
-        // Obtém e junta o texto de TODAS as colunas clínicas (C + D)
         const evolucaoTexto = obterTextoEvolucaoCompleto(row);
 
         const rawIdadeStr = obterValorColuna(row, ['IDADE', 'Idade', 'idade']);
@@ -652,7 +585,7 @@
       if (chartCirurgiaDisfagiaInst) chartCirurgiaDisfagiaInst.destroy();
       if (chartRTDisfagiaInst) chartRTDisfagiaInst.destroy();
 
-      // 1. Faixa Etária
+      // 1. Faixa Etária (sem <18)
       const faixas = { '18-39 anos': 0, '40-59 anos': 0, '60-74 anos': 0, '75+ anos': 0, 'Não informada': 0 };
       dadosParaExibir.forEach(d => {
         if (!d.idade) faixas['Não informada']++;
