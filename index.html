@@ -313,7 +313,6 @@
     let chartCirurgiaDisfagiaInst = null;
     let chartRTDisfagiaInst = null;
 
-    // Estado da ordenação da tabela
     let currentSortColumn = null;
     let currentSortDirection = 'asc';
 
@@ -418,10 +417,62 @@
       return strVal;
     }
 
+    // Função de extração e padronização rigorosa de nomes de dietas
+    function testarDietaOral(str) {
+      if (!str) return null;
+      const s = str.toLowerCase();
+      if (/disfagia\s*liquidificada/.test(s)) return 'Disfagia Liquidificada';
+      if (/disfagia\s*pastosa/.test(s)) return 'Disfagia Pastosa';
+      if (/disfagia\s*branda/.test(s)) return 'Disfagia Branda';
+      if (/macia\s*[\/e]\s*picada|macia\s*e?\s*picada|\bmacia\b/.test(s)) return 'Macia e Picada';
+      if (/mo[íi]da\s*[\/e]\s*[úu]mida|mo[íi]da\s*e?\s*[úu]mida|\bmo[íi]da\b/.test(s)) return 'Moída e Úmida';
+      if (/liquidificada/.test(s)) return 'Liquidificada';
+      if (/pastosa/.test(s)) return 'Pastosa';
+      if (/branda/.test(s)) return 'Branda';
+      if (/l[íi]quida|l[íi]quidos/.test(s)) return 'Líquida';
+      if (/\bnormal\b|\bgeral\b|\blivre\b/.test(s)) return 'Normal';
+      if (/\bzero\b|npo\b|nada\s*vo/.test(s)) return 'Zero VO';
+      return null;
+    }
+
+    function extrairNomePadronizadoDieta(trechoTexto, textoCompleto = '') {
+      const textoTrechoNorm = (trechoTexto || '').toLowerCase();
+      const textoCompletoNorm = (textoCompleto || '').toLowerCase();
+
+      let sondas = [];
+      const textoParaSonda = trechoTexto ? textoTrechoNorm : textoCompletoNorm;
+      
+      if (/\b(gtt|gastrostomia)\b/.test(textoParaSonda) || /\b(gtt|gastrostomia)\b/.test(textoCompletoNorm)) {
+        sondas.push('GTT');
+      } else if (/\b(jej|jejunostomia)\b/.test(textoParaSonda) || /\b(jej|jejunostomia)\b/.test(textoCompletoNorm)) {
+        sondas.push('JEJ');
+      } else if (/\b(sne|nasoent|nasoentérica|nasoenterica|sonda\s*enteral)\b/.test(textoParaSonda) || /\b(sne|nasoent|nasoentérica|nasoenterica)\b/.test(textoCompletoNorm)) {
+        sondas.push('SNE');
+      }
+
+      let dietasVO = [];
+      let achouVO = testarDietaOral(textoTrechoNorm);
+      
+      if (!achouVO && textoCompletoNorm && textoCompletoNorm !== textoTrechoNorm) {
+        achouVO = testarDietaOral(textoCompletoNorm);
+      }
+
+      if (achouVO) {
+        dietasVO.push(achouVO);
+      }
+
+      const resultado = [...sondas, ...dietasVO];
+      if (resultado.length > 0) {
+        return resultado.join(' + ');
+      }
+
+      return 'Não informada';
+    }
+
     function extrairDadosEvolucao(textoOriginal) {
       if (!textoOriginal || typeof textoOriginal !== 'string') return {
         fois: null, asha: null, grauDisfagia: 'Não informado',
-        sne: 'Não', tqt: 'Não', estase: 'Não', dieta: 'Não especificada',
+        sne: 'Não', tqt: 'Não', estase: 'Não', dieta: 'Não especificada em Conduta',
         eletro: 'Não', peso: '-', exercicios: 'Nenhum/Não especificado',
         rt: 'Não', doseNum: 0, doseRT: '-', qt: 'Não', cirurgia: 'Não realizada/Não descrita',
         dietaAtual: 'Não informada', edema: 'Não'
@@ -468,21 +519,41 @@
         if (cxMatch) cirurgia = cxMatch[1].trim();
       }
 
-      // Dieta Atual
-      let dietaAtual = 'Não informada';
+      // Dieta Atual (Extração + Padronização)
+      let trechoDietaAtual = '';
       const dietaAtualMatch = texto.match(/(?:dieta\s*atual|ingesta\s*atual|recebendo\s*dieta|vo\s*atual|mant[ée]m\s*dieta)[:\s]*([^.,;\n\r]+)/i);
       if (dietaAtualMatch) {
-        dietaAtual = dietaAtualMatch[1].trim();
+        trechoDietaAtual = dietaAtualMatch[1].trim();
       } else if (/dieta\s*branda|dieta\s*pastosa|dieta\s*l[íi]quida|via\s*oral\s*livre/i.test(texto)) {
         const achadoDieta = texto.match(/(?:dieta|via\s*oral)\s*(?:branda|pastosa|l[íi]quida|livre|zero)/i);
-        if (achadoDieta) dietaAtual = achadoDieta[0];
+        if (achadoDieta) trechoDietaAtual = achadoDieta[0];
+      }
+      const dietaAtual = extrairNomePadronizadoDieta(trechoDietaAtual, textoOriginal);
+
+      // Conduta / Dieta Prescrita (Extração + Padronização)
+      let trechoConduta = '';
+      const condutaMatch = texto.match(/conduta(?:s|[\s\-]*fonoaudi[óo]lica|[\s\-]*fono)?\s*[:\-]\s*([^.,;\n\r]+)/i);
+      if (condutaMatch) {
+        trechoConduta = condutaMatch[1].trim().replace(/^[\s\-:\.,;]+/, '').trim();
+      }
+      let dieta = extrairNomePadronizadoDieta(trechoConduta, condutaMatch ? trechoConduta : '');
+      if (dieta === 'Não informada') {
+        dieta = 'Não especificada em Conduta';
       }
 
-      // Edema
+      // Edema ajustado para parar em novas linhas (\n, \r), pontuações ou marcadores (#, >, *, -)
       let edema = 'Não';
-      if (/edema/i.test(texto)) {
-        const edemaMatch = texto.match(/edema[^\.,;]*/i);
-        edema = edemaMatch ? edemaMatch[0] : 'Sim';
+      if (/edema/i.test(textoOriginal)) {
+        const edemaMatch = textoOriginal.match(/edema[^\n\r\.,;:>#*]*/i);
+        if (edemaMatch) {
+          let trechoEdema = edemaMatch[0].trim();
+          if (/\s+[-–—]/.test(trechoEdema)) {
+            trechoEdema = trechoEdema.split(/\s+[-–—]/)[0].trim();
+          }
+          edema = trechoEdema || 'Sim';
+        } else {
+          edema = 'Sim';
+        }
       }
 
       // FOIS
@@ -506,15 +577,6 @@
       const sne = (/\bsne\b|sonda\s*nasoent|nasoenteral|\bgtt\b|gastrostomia|sonda\s*enteral/i.test(texto)) ? 'Sim' : 'Não';
       const tqt = (/\btqt\b|traqueostomia|c[âa]nula\s*traqueal/i.test(texto)) ? 'Sim' : 'Não';
       const estase = /estase\s*salivar/i.test(texto) ? 'Sim' : 'Não';
-
-      // Conduta / Dieta Prescrita
-      let dieta = 'Não especificada em Conduta';
-      const condutaMatch = texto.match(/conduta(?:s|[\s\-]*fonoaudi[óo]lica|[\s\-]*fono)?\s*[:\-]\s*([^.,;\n\r]+)/i);
-      if (condutaMatch) {
-        let trechoConduta = condutaMatch[1].trim().replace(/^[\s\-:\.,;]+/, '').trim();
-        const regexTermosDieta = /\b(dieta|vo|via\s*oral|zero|branda|pastosa|l[íi]quid[ao]s?|espessad[ao]s?|pastoso|brand[ao]|livre|geral|brand|sonda|nasoenteral|sne|parenteral|enteral|fracionad[ao]|consist[êe]ncia)\b/i;
-        if (regexTermosDieta.test(trechoConduta)) dieta = trechoConduta;
-      }
 
       // Exercícios
       let exercicios = [];
@@ -632,7 +694,6 @@
       aplicarFiltros();
     }
 
-    // Lógica de Alternância e Execução de Ordenação
     function ordenarPor(coluna) {
       if (currentSortColumn === coluna) {
         currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -755,7 +816,7 @@
       if (chartCirurgiaDisfagiaInst) chartCirurgiaDisfagiaInst.destroy();
       if (chartRTDisfagiaInst) chartRTDisfagiaInst.destroy();
 
-      // 1. Faixa Etária (sem <18)
+      // 1. Faixa Etária
       const faixas = { '18-39 anos': 0, '40-59 anos': 0, '60-74 anos': 0, '75+ anos': 0, 'Não informada': 0 };
       dadosParaExibir.forEach(d => {
         if (!d.idade) faixas['Não informada']++;
@@ -937,7 +998,6 @@
         return true;
       });
 
-      // Aplica ordenação se houver coluna selecionada
       if (currentSortColumn) {
         filtrados.sort((a, b) => compararValores(a, b, currentSortColumn, currentSortDirection));
       }
