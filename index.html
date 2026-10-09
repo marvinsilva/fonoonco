@@ -179,15 +179,48 @@
       <table class="w-full text-left text-xs text-slate-600">
         <thead class="bg-slate-100 text-slate-700 uppercase font-semibold">
           <tr>
-            <th class="p-3 align-top">Data</th>
-            <th class="p-3 align-top">Paciente</th>
-            <th class="p-3 align-top">Idade</th>
-            <th class="p-3 align-top">Peso</th>
-            <th class="p-3 align-top">Tratamentos (RT/QT)</th>
-            <th class="p-3 align-top">Cirurgia (CX)</th>
             <th class="p-3 align-top">
-              <div>Grau Disfagia</div>
-              <select id="filterGrau" class="table-select filter-trigger">
+              <div onclick="ordenarPor('data')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Data</span>
+                <i id="sort-icon-data" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('prontuario')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Paciente</span>
+                <i id="sort-icon-prontuario" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('idade')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Idade</span>
+                <i id="sort-icon-idade" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('peso')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Peso</span>
+                <i id="sort-icon-peso" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('tratamento')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Tratamentos (RT/QT)</span>
+                <i id="sort-icon-tratamento" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('cirurgia')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Cirurgia (CX)</span>
+                <i id="sort-icon-cirurgia" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('grauDisfagia')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Grau Disfagia</span>
+                <i id="sort-icon-grauDisfagia" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+              <select id="filterGrau" class="table-select filter-trigger" onclick="event.stopPropagation()">
                 <option value="">Todos</option>
                 <option value="Normal">Normal</option>
                 <option value="Leve">Leve</option>
@@ -199,33 +232,62 @@
               </select>
             </th>
             <th class="p-3 align-top text-center">
-              <div>FOIS</div>
-              <select id="filterFOIS" class="table-select filter-trigger">
+              <div onclick="ordenarPor('fois')" class="cursor-pointer select-none flex items-center justify-center hover:text-indigo-600">
+                <span>FOIS</span>
+                <i id="sort-icon-fois" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+              <select id="filterFOIS" class="table-select filter-trigger" onclick="event.stopPropagation()">
                 <option value="">Todos</option>
                 <option value="1">1</option><option value="2">2</option><option value="3">3</option>
                 <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
               </select>
             </th>
             <th class="p-3 align-top text-center">
-              <div>SNE</div>
-              <select id="filterSNE" class="table-select filter-trigger">
+              <div onclick="ordenarPor('sne')" class="cursor-pointer select-none flex items-center justify-center hover:text-indigo-600">
+                <span>SNE</span>
+                <i id="sort-icon-sne" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+              <select id="filterSNE" class="table-select filter-trigger" onclick="event.stopPropagation()">
                 <option value="">Todos</option>
                 <option value="Sim">Sim</option>
                 <option value="Não">Não</option>
               </select>
             </th>
             <th class="p-3 align-top text-center">
-              <div>TQT</div>
-              <select id="filterTQT" class="table-select filter-trigger">
+              <div onclick="ordenarPor('tqt')" class="cursor-pointer select-none flex items-center justify-center hover:text-indigo-600">
+                <span>TQT</span>
+                <i id="sort-icon-tqt" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+              <select id="filterTQT" class="table-select filter-trigger" onclick="event.stopPropagation()">
                 <option value="">Todos</option>
                 <option value="Sim">Sim</option>
                 <option value="Não">Não</option>
               </select>
             </th>
-            <th class="p-3 align-top">Edema</th>
-            <th class="p-3 align-top">Dieta VO Atual</th>
-            <th class="p-3 align-top">Conduta Dieta</th>
-            <th class="p-3 align-top">Exercícios</th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('edema')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Edema</span>
+                <i id="sort-icon-edema" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('dietaAtual')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Dieta VO Atual</span>
+                <i id="sort-icon-dietaAtual" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('dieta')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Conduta Dieta</span>
+                <i id="sort-icon-dieta" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
+              <div onclick="ordenarPor('exercicios')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Exercícios</span>
+                <i id="sort-icon-exercicios" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200">
@@ -250,6 +312,10 @@
     let chartFOISInst = null;
     let chartCirurgiaDisfagiaInst = null;
     let chartRTDisfagiaInst = null;
+
+    // Estado da ordenação da tabela
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc';
 
     function normalizarChave(str) {
       if (!str) return '';
@@ -304,7 +370,6 @@
       return textosUnificados.join(' ');
     }
 
-    // Formatação robusta para DD/MM/AAAA tratando objetos Date, números ordinais do Excel e strings por extenso
     function formatarData(val) {
       if (!val) return 'S/D';
 
@@ -567,6 +632,77 @@
       aplicarFiltros();
     }
 
+    // Lógica de Alternância e Execução de Ordenação
+    function ordenarPor(coluna) {
+      if (currentSortColumn === coluna) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortColumn = coluna;
+        currentSortDirection = 'asc';
+      }
+      aplicarFiltros();
+    }
+
+    function converterDataParaIso(strData) {
+      if (!strData || strData === 'S/D') return '00000000';
+      const parts = strData.split('/');
+      if (parts.length === 3) {
+        return `${parts[2]}${parts[1].padStart(2, '0')}${parts[0].padStart(2, '0')}`;
+      }
+      return '00000000';
+    }
+
+    function compararValores(a, b, coluna, direcao) {
+      let valA, valB;
+
+      if (coluna === 'tratamento') {
+        valA = (a.rt === 'Sim' ? 'RT' : '') + (a.qt === 'Sim' ? 'QT' : '');
+        valB = (b.rt === 'Sim' ? 'RT' : '') + (b.qt === 'Sim' ? 'QT' : '');
+      } else {
+        valA = a[coluna];
+        valB = b[coluna];
+      }
+
+      let res = 0;
+
+      if (coluna === 'data') {
+        const isoA = converterDataParaIso(valA);
+        const isoB = converterDataParaIso(valB);
+        res = isoA.localeCompare(isoB);
+      } else if (coluna === 'idade' || coluna === 'fois') {
+        const numA = (valA === null || valA === undefined) ? -999999 : Number(valA);
+        const numB = (valB === null || valB === undefined) ? -999999 : Number(valB);
+        res = numA - numB;
+      } else if (coluna === 'peso') {
+        const floatA = (valA === '-' || !valA) ? -999999 : parseFloat(String(valA).replace(',', '.'));
+        const floatB = (valB === '-' || !valB) ? -999999 : parseFloat(String(valB).replace(',', '.'));
+        res = floatA - floatB;
+      } else {
+        const strA = String(valA || '').toLowerCase();
+        const strB = String(valB || '').toLowerCase();
+        res = strA.localeCompare(strB, 'pt-BR', { numeric: true, sensitivity: 'base' });
+      }
+
+      return direcao === 'asc' ? res : -res;
+    }
+
+    function atualizarIconesOrdenacao() {
+      const colunas = ['data', 'prontuario', 'idade', 'peso', 'tratamento', 'cirurgia', 'grauDisfagia', 'fois', 'sne', 'tqt', 'edema', 'dietaAtual', 'dieta', 'exercicios'];
+      
+      colunas.forEach(col => {
+        const icon = document.getElementById(`sort-icon-${col}`);
+        if (!icon) return;
+
+        if (col === currentSortColumn) {
+          icon.className = currentSortDirection === 'asc' 
+            ? 'fa-solid fa-sort-up text-indigo-600 text-xs ml-1' 
+            : 'fa-solid fa-sort-down text-indigo-600 text-xs ml-1';
+        } else {
+          icon.className = 'fa-solid fa-sort text-slate-400 text-xs ml-1';
+        }
+      });
+    }
+
     function renderTabela(data) {
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
@@ -787,7 +923,7 @@
       const valSNE = document.getElementById('filterSNE').value;
       const valTQT = document.getElementById('filterTQT').value;
 
-      const filtrados = parsedData.filter(d => {
+      let filtrados = parsedData.filter(d => {
         if (valGrau && d.grauDisfagia !== valGrau) return false;
         if (valFOIS && (d.fois === null || d.fois.toString() !== valFOIS)) return false;
         if (valSNE && d.sne !== valSNE) return false;
@@ -801,8 +937,14 @@
         return true;
       });
 
+      // Aplica ordenação se houver coluna selecionada
+      if (currentSortColumn) {
+        filtrados.sort((a, b) => compararValores(a, b, currentSortColumn, currentSortDirection));
+      }
+
       renderTabela(filtrados);
       renderGraficos(filtrados);
+      atualizarIconesOrdenacao();
     }
 
     document.querySelectorAll('.filter-trigger').forEach(el => el.addEventListener('change', aplicarFiltros));
@@ -811,6 +953,8 @@
     document.getElementById('resetFilters').addEventListener('click', () => {
       document.getElementById('tableSearch').value = '';
       document.querySelectorAll('.filter-trigger').forEach(select => select.value = '');
+      currentSortColumn = null;
+      currentSortDirection = 'asc';
       aplicarFiltros();
     });
   </script>
