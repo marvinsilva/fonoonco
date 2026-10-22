@@ -60,10 +60,19 @@
       <i id="statusIcon" class="fa-solid fa-user-shield text-emerald-600 text-xl"></i>
       <div>
         <span id="statusText" class="text-slate-700 text-sm font-medium block">Ambiente Seguro (100% Local)</span>
-        <span class="text-slate-400 text-xs">Nenhum dado do seu paciente sai do seu computador. Selecione um arquivo para começar.</span>
+        <span class="text-slate-400 text-xs">Nenhum dado do seu paciente sai do seu computador. Selecione ou arraste um arquivo para começar.</span>
       </div>
     </div>
     <span id="totalRecordsBadge" class="hidden bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">0 registros</span>
+  </div>
+
+  <!-- Filtros globais -->
+  <div class="card p-4 mb-6 flex flex-wrap items-end gap-4 text-sm text-slate-600">
+    <label class="flex flex-col text-xs font-semibold">De<input type="month" id="filtroDe" class="table-select !w-auto !text-sm"></label>
+    <label class="flex flex-col text-xs font-semibold">Até<input type="month" id="filtroAte" class="table-select !w-auto !text-sm"></label>
+    <label class="flex flex-col text-xs font-semibold">Faixa etária<select id="filtroFaixa" class="table-select !w-auto !text-sm"><option value="">Todas</option><option>Até 39 anos</option><option>40-59 anos</option><option>60-74 anos</option><option>75+ anos</option></select></label>
+    <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer pb-1"><input type="checkbox" id="showNI"> Mostrar "Não informado/a" nos gráficos</label>
+    <span class="text-xs text-slate-400 pb-1">Os filtros da tabela (grau, FOIS, SNE, TQT) também atualizam gráficos e KPIs.</span>
   </div>
 
   <!-- Cards KPI -->
@@ -93,7 +102,7 @@
         <i class="fa-solid fa-syringe"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Uso de SNE</p>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Com sonda (último atend.)</p>
         <h3 id="kpiSNE" class="text-2xl font-bold text-slate-800">0%</h3>
       </div>
     </div>
@@ -103,7 +112,7 @@
         <i class="fa-solid fa-head-side-mask"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Uso de TQT</p>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Com TQT (último atend.)</p>
         <h3 id="kpiTQT" class="text-2xl font-bold text-slate-800">0%</h3>
       </div>
     </div>
@@ -113,7 +122,7 @@
         <i class="fa-solid fa-radiation"></i>
       </div>
       <div>
-        <p class="text-xs text-slate-500 uppercase font-semibold">Em RT/RDT</p>
+        <p class="text-xs text-slate-500 uppercase font-semibold">Antecedente de RT</p>
         <h3 id="kpiRT" class="text-2xl font-bold text-slate-800">0%</h3>
       </div>
     </div>
@@ -146,7 +155,7 @@
   <!-- Gráficos de Cruzamento Clínico (Linha 2) -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <div class="card p-5">
-      <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2"><i class="fa-solid fa-scalpel text-indigo-500"></i> Cirurgia vs. Grau de Disfagia</h3>
+      <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2"><i class="fa-solid fa-scissors text-indigo-500"></i> Cirurgia vs. Grau de Disfagia</h3>
       <p class="text-xs text-slate-400 mb-4">Proporção de severidade de disfagia por tipo de cirurgia</p>
       <div class="relative h-72">
         <canvas id="chartCirurgiaDisfagia"></canvas>
@@ -162,6 +171,28 @@
     </div>
   </div>
 
+  <h2 class="text-lg font-bold text-slate-700 mb-3 mt-2"><i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>Evolução e acompanhamento</h2>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">FOIS e ASHA: primeiro → último atendimento</h3><p class="text-xs text-slate-400 mb-4">Pacientes com 2+ registros da escala</p></div></div><div class="relative h-72"><canvas id="chartEvolResumo"></canvas></div></div>
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Trajetória individual</h3><p class="text-xs text-slate-400 mb-4">Cada linha é um paciente (leve deslocamento vertical para não sobrepor)</p></div><select id="evolMetric" class="table-select !w-auto"><option value="fois">FOIS</option><option value="asha">ASHA NOMS</option></select></div><div class="relative h-72"><canvas id="chartSpag"></canvas></div></div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Exercícios mais prescritos</h3><p class="text-xs text-slate-400 mb-4">Nº de pacientes que receberam cada exercício</p></div></div><div class="relative h-72"><canvas id="chartExFreq"></canvas></div></div>
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Exercícios × melhora do FOIS</h3><p class="text-xs text-slate-400 mb-4">% de pacientes com FOIS final maior que o inicial (n entre parênteses). Descritivo, não indica causalidade.</p></div></div><div class="relative h-72"><canvas id="chartExMelhora"></canvas></div></div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Transição de dieta: primeiro vs. último atendimento</h3><p class="text-xs text-slate-400 mb-4">Pacientes com 2+ atendimentos</p></div></div><div class="relative h-72"><canvas id="chartDietaTrans"></canvas></div></div>
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Atendimentos por mês</h3><p class="text-xs text-slate-400 mb-4">Meses sem registro aparecem vazios</p></div></div><div class="relative h-72"><canvas id="chartTempo"></canvas></div></div>
+  </div>
+  <h2 class="text-lg font-bold text-slate-700 mb-3 mt-2"><i class="fa-solid fa-user-group text-indigo-500 mr-2"></i>Perfil e cruzamentos</h2>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Sessões por paciente</h3><p class="text-xs text-slate-400 mb-4">Distribuição do nº de atendimentos</p></div></div><div class="relative h-72"><canvas id="chartSessoes"></canvas></div></div>
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Intervalo entre sessões</h3><p class="text-xs text-slate-400 mb-4">Dias entre atendimentos consecutivos do mesmo paciente</p></div></div><div class="relative h-72"><canvas id="chartIntervalo"></canvas></div></div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">FOIS médio no 1º registro, por grupo</h3><p class="text-xs text-slate-400 mb-4">Compara pacientes com e sem cada característica (n no rótulo)</p></div></div><div class="relative h-72"><canvas id="chartFoisGrupos"></canvas></div></div>
+    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Faixa etária × Grau de disfagia</h3><p class="text-xs text-slate-400 mb-4">Grau do último registro de cada paciente</p></div></div><div class="relative h-72"><canvas id="chartIdadeGrau"></canvas></div></div>
+  </div>
   <!-- Tabela de Dados -->
   <div class="card p-5 mb-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
@@ -169,6 +200,7 @@
       
       <div class="flex items-center gap-2">
         <input type="text" id="tableSearch" placeholder="Buscar na tabela..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <button id="exportCsv" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-2 rounded-lg transition"><i class="fa-solid fa-download mr-1"></i>CSV</button>
         <button id="resetFilters" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-2 rounded-lg transition" title="Limpar Filtros">
           Limpar
         </button>
@@ -297,6 +329,7 @@
         </tbody>
       </table>
     </div>
+    <div id="paginacao" class="flex items-center justify-between mt-4 text-xs text-slate-500"></div>
   </div>
 
   <!-- Rodapé -->
@@ -469,7 +502,7 @@
       return 'Não informada';
     }
 
-    function extrairDadosEvolucao(textoOriginal) {
+    function extrairBase(textoOriginal) {
       if (!textoOriginal || typeof textoOriginal !== 'string') return {
         fois: null, asha: null, grauDisfagia: 'Não informado',
         sne: 'Não', tqt: 'Não', estase: 'Não', dieta: 'Não especificada em Conduta',
@@ -602,96 +635,114 @@
       };
     }
 
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    const GRAUS=['Normal','Leve','Leve a Moderada','Moderada','Moderada a Grave','Grave'];
+    const COR=['#10b981','#3b82f6','#f59e0b','#d97706','#ef4444','#b91c1c','#94a3b8'];
+    const CX=[['Glossectomia',/glossectomia/],['Laringectomia Total',/laringectomia\s*total/],['Laringectomia Parcial',/laringectomia/],['Mandibulectomia',/mandibulectomia/],['Esvaziamento Cervical',/esvaziamento\s*cervical/],['Ressecção de Lesão',/ressec[çc][ãa]o/]];
+    const EXS=[['TVSO',/tvso|canudo|lax\s*vox|tubo\s*de\s*resson/],['Masako',/masako/],['Mendelson',/mendel/],['CTAR',/ctar/],['Sobrearticulação',/sobrearticula/],['Rotação de língua',/rota[çc][ãa]o\s*de\s*l[íi]ngua/],['Varredura de palato',/varredura|varrer/],['Shaker',/shaker/],['Deglutição c/ esforço',/degluti[çc][ãa]o\s*com\s*esfor[çc]o|degluti\w*\s*com\s*esfor/],['Eletroterapia',/eletro/],['Alongamento',/alongamento/]];
 
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        try {
-          const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true, codepage: 65001 });
-          const sheetName = workbook.SheetNames.includes("DADOS") ? "DADOS" : workbook.SheetNames[0];
-          
-          rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-          document.getElementById('statusText').innerText = `Planilha "${file.name}" processada com sucesso no seu navegador.`;
-          processarDadosExcel(rawData);
-        } catch (err) {
-          alert('Erro ao ler a planilha Excel. Verifique se o formato do arquivo é válido.');
-          console.error(err);
+    function detectarGrau(txt) {
+      const s = txt.replace(/\s+/g, ' ').toLowerCase();
+      const i = s.search(/impress[ãa]o/);
+      for (const alvo of (i >= 0 ? [s.slice(i, i + 400), s] : [s])) {
+        if (/sem\s*disfagia|degluti[çc][ãa]o\s*(normal|funcional)|aus[êe]ncia\s*de\s*disfagia|disfagia\s*ausente/.test(alvo)) return 'Normal';
+        for (const x of (alvo.match(/disfagia[^.;]{0,50}/g) || [])) {
+          if (/leve\s*(a|à|\/|-|até)\s*moderad/.test(x)) return 'Leve a Moderada';
+          if (/moderad[ao]\s*(a|à|\/|-|até)\s*grave/.test(x)) return 'Moderada a Grave';
+          if (/\b(leve|discret[ao])\b/.test(x)) return 'Leve';
+          if (/moderad[ao]/.test(x)) return 'Moderada';
+          if (/\b(grave|severa)\b/.test(x)) return 'Grave';
         }
-      };
-      reader.readAsArrayBuffer(file);
-    });
-
-    function processarDadosExcel(rows) {
-      if (!rows || rows.length === 0) {
-        document.getElementById('statusText').innerText = 'A planilha carregada não contém registros.';
-        return;
       }
-
-      const prontuarioMap = new Map();
-      let contadorPaciente = 1;
-
-      parsedData = rows.map(row => {
-        const rawDataVal = obterValorColuna(row, ['DATA (primeiro atendimento)', 'DATA', 'Data', 'ATENDIMENTO']);
-        const dataAtendimento = formatarData(rawDataVal);
-
-        const prontOriginal = obterValorColuna(row, ['PRONT', 'PRONTUÁRIO', 'PRONTUARIO', 'REGISTRO', 'PACIENTE']) || 'S/N';
-        
-        let prontuarioAnonimo;
-        if (prontOriginal === 'S/N' || prontOriginal === '' || prontOriginal === 'undefined') {
-          prontuarioAnonimo = 'Paciente S/N';
-        } else {
-          if (!prontuarioMap.has(prontOriginal)) {
-            prontuarioMap.set(prontOriginal, `Paciente ${contadorPaciente}`);
-            contadorPaciente++;
-          }
-          prontuarioAnonimo = prontuarioMap.get(prontOriginal);
-        }
-
-        const evolucaoTexto = obterTextoEvolucaoCompleto(row);
-
-        const rawIdadeStr = obterValorColuna(row, ['IDADE', 'Idade', 'idade']);
-        const rawIdade = parseInt(rawIdadeStr);
-        const idade = isNaN(rawIdade) ? null : rawIdade;
-
-        const dadosExtraidos = extrairDadosEvolucao(evolucaoTexto);
-
-        return {
-          prontuarioRaw: prontOriginal,
-          prontuario: prontuarioAnonimo,
-          data: dataAtendimento,
-          idade,
-          ...dadosExtraidos
-        };
-      });
-
-      atualizarInterface();
+      return 'Não informado';
     }
 
-    function atualizarInterface() {
+    // Estado atual vem só da EVOLUÇÃO; antecedentes (RT, QT, cirurgia) vêm do HISTÓRICO (com fallback na evolução)
+    function extrairDadosEvolucao(evol, hist) {
+      const E = extrairBase(evol), H = extrairBase(hist || '');
+      const t = (evol || '').replace(/\s+/g, ' ').toLowerCase(), th = (hist || '').toLowerCase();
+      let tqtStatus = 'Não';
+      if (/\bdecanulad[oa]\b/.test(t)) tqtStatus = 'Decanulado';
+      else if (/c[âa]nula\s*(ocluíd|ocluid|fechad)|decanula[çc][ãa]o/.test(t)) tqtStatus = 'Em decanulação';
+      else if (/\btqt\b|traqueostomia|c[âa]nula/.test(t)) tqtStatus = 'Com TQT';
+      const tipo = /\b(gtt|gastrostomia)\b/.test(t) ? 'GTT' : /\b(jej|jejunostomia)\b/.test(t) ? 'JEJ' : /\bsne\b|nasoent|sonda\s*enteral/.test(t) ? 'SNE' : null;
+      const negada = /(sem|retirad[ao]|retirou|removid[ao]|suspens[ao]|desmam\w*|alta d[ea])\s[^.;]{0,25}\b(sne|sonda|gtt|gastrostomia|jejunostomia)/.test(t);
+      const sondaTipo = (tipo && !negada) ? tipo : 'Não';
+      const cx = (CX.find(([n, r]) => r.test(th)) || CX.find(([n, r]) => r.test(t)) || ['Não descrita'])[0];
+      const exList = EXS.filter(([n, r]) => r.test(t)).map(x => x[0]);
+      const doseNum = H.doseNum || E.doseNum;
+      return { ...E,
+        grauDisfagia: evol ? detectarGrau(evol) : 'Não informado',
+        sne: sondaTipo !== 'Não' ? 'Sim' : 'Não', sondaTipo,
+        tqt: (tqtStatus === 'Com TQT' || tqtStatus === 'Em decanulação') ? 'Sim' : 'Não', tqtStatus,
+        rt: (H.rt === 'Sim' || E.rt === 'Sim') ? 'Sim' : 'Não', qt: (H.qt === 'Sim' || E.qt === 'Sim') ? 'Sim' : 'Não',
+        doseNum, doseRT: doseNum ? doseNum + ' Gy' : '-', cirurgia: cx,
+        exList, exercicios: exList.join(', ') || 'Nenhum/Não especificado', eletro: exList.includes('Eletroterapia') ? 'Sim' : 'Não' };
+    }
+
+    function rawCol(row, termo) {
+      const t = normalizarChave(termo);
+      const k = Object.keys(row).find(k => normalizarChave(k).includes(t));
+      return k ? row[k] : '';
+    }
+    function faixaIdade(i) {
+      if (i === null || i === undefined) return 'Não informada';
+      return i <= 39 ? 'Até 39 anos' : i <= 59 ? '40-59 anos' : i <= 74 ? '60-74 anos' : '75+ anos';
+    }
+
+    function lerArquivo(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        try {
+          const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array', cellDates: true, codepage: 65001 });
+          const nome = wb.SheetNames.includes('DADOS') ? 'DADOS' : wb.SheetNames[0];
+          rawData = XLSX.utils.sheet_to_json(wb.Sheets[nome], { defval: '' });
+          processarDadosExcel(rawData, file.name);
+        } catch (err) { alert('Erro ao ler a planilha Excel. Verifique se o formato do arquivo é válido.'); console.error(err); }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+    document.getElementById('fileInput').addEventListener('change', e => lerArquivo(e.target.files[0]));
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => { e.preventDefault(); lerArquivo(e.dataTransfer.files[0]); });
+
+    function processarDadosExcel(rows, nomeArq) {
+      if (!rows || rows.length === 0) { document.getElementById('statusText').innerText = 'A planilha carregada não contém registros.'; return; }
+      const mapa = new Map(); let n = 1, ign = 0, dInv = 0;
+      parsedData = [];
+      rows.forEach((row, idx) => {
+        const hist = String(rawCol(row, 'HISTÓRICO') || '').trim(), evol = String(rawCol(row, 'EVOLUÇÃO') || '').trim();
+        if (/sem permiss[ãa]o para consultar/i.test(hist + evol)) { ign++; return; }
+        let data = formatarData(rawCol(row, 'DATA')), ts = null;
+        const m = data.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (m && +m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1) ts = Date.UTC(+m[3], +m[2] - 1, +m[1]); else { data = 'S/D'; dInv++; }
+        const pr = String(rawCol(row, 'PRONT') || '').trim() || 'S/N';
+        if (pr !== 'S/N' && !mapa.has(pr)) mapa.set(pr, 'Paciente ' + n++);
+        const id = parseInt(rawCol(row, 'IDADE')), idade = isNaN(id) ? null : id;
+        parsedData.push({ idx, prontuarioRaw: pr, prontuario: pr === 'S/N' ? 'Paciente S/N' : mapa.get(pr), data, ts, idade, faixa: faixaIdade(idade), ...extrairDadosEvolucao(evol, hist) });
+      });
+      document.getElementById('statusText').innerText = `"${nomeArq}" processada no seu navegador: ${parsedData.length} atendimentos analisados · ${ign} ignorados (sem permissão no prontuário) · ${dInv} com data inválida/ausente`;
       const badge = document.getElementById('totalRecordsBadge');
-      badge.innerText = `${parsedData.length} registros`;
-      badge.classList.remove('hidden');
-
-      document.getElementById('kpiTotalAtendimentos').innerText = parsedData.length;
-
-      const pacientesUnicos = new Set(
-        parsedData.map(d => d.prontuarioRaw).filter(p => p !== '' && p !== 'S/N' && p !== 'undefined')
-      ).size;
-      document.getElementById('kpiPacientesUnicos').innerText = pacientesUnicos;
-
-      const totalSNE = parsedData.filter(d => d.sne === 'Sim').length;
-      document.getElementById('kpiSNE').innerText = parsedData.length ? Math.round((totalSNE / parsedData.length) * 100) + '%' : '0%';
-
-      const totalTQT = parsedData.filter(d => d.tqt === 'Sim').length;
-      document.getElementById('kpiTQT').innerText = parsedData.length ? Math.round((totalTQT / parsedData.length) * 100) + '%' : '0%';
-
-      const totalRT = parsedData.filter(d => d.rt === 'Sim').length;
-      document.getElementById('kpiRT').innerText = parsedData.length ? Math.round((totalRT / parsedData.length) * 100) + '%' : '0%';
-
+      badge.innerText = `${parsedData.length} registros`; badge.classList.remove('hidden');
       aplicarFiltros();
+    }
+
+    function agruparPacientes(dados) {
+      const m = new Map();
+      dados.forEach(d => { if (d.prontuarioRaw === 'S/N') return; if (!m.has(d.prontuarioRaw)) m.set(d.prontuarioRaw, []); m.get(d.prontuarioRaw).push(d); });
+      m.forEach(a => a.sort((x, y) => (x.ts ?? 1e15) - (y.ts ?? 1e15) || x.idx - y.idx));
+      return [...m.values()];
+    }
+    const ultimo = (a, f) => [...a].reverse().find(f);
+    const pct = (x, n) => n ? Math.round(x / n * 100) + '%' : '0%';
+
+    function atualizarKPIs(dados) {
+      const pacs = agruparPacientes(dados), n = pacs.length;
+      const set = (id, v) => document.getElementById(id).innerText = v;
+      set('kpiTotalAtendimentos', dados.length); set('kpiPacientesUnicos', n);
+      set('kpiSNE', pct(pacs.filter(a => a[a.length - 1].sne === 'Sim').length, n));
+      set('kpiTQT', pct(pacs.filter(a => a[a.length - 1].tqt === 'Sim').length, n));
+      set('kpiRT', pct(pacs.filter(a => a.some(d => d.rt === 'Sim')).length, n));
     }
 
     function ordenarPor(coluna) {
@@ -764,41 +815,50 @@
       });
     }
 
-    function renderTabela(data) {
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = '';
+    let filtradosAtuais = [], pagina = 0;
+    const POR_PAGINA = 50;
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+    function renderTabela(data) {
+      filtradosAtuais = data;
+      const tbody = document.getElementById('tableBody'), pg = document.getElementById('paginacao');
+      const total = Math.max(1, Math.ceil(data.length / POR_PAGINA));
+      pagina = Math.min(pagina, total - 1);
       if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="14" class="p-4 text-center text-slate-400">Nenhum registro atende aos filtros selecionados.</td></tr>`;
-        return;
+        pg.innerHTML = ''; return;
       }
-
-      data.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
-
-        const tratamentoTxt = [];
-        if (item.rt === 'Sim') tratamentoTxt.push(`RT (${item.doseRT})`);
-        if (item.qt === 'Sim') tratamentoTxt.push('QT');
-
-        tr.innerHTML = `
-          <td class="p-3 font-medium text-slate-700">${item.data}</td>
-          <td class="p-3 font-semibold text-indigo-600">${item.prontuario}</td>
-          <td class="p-3">${item.idade ? item.idade : '-'}</td>
-          <td class="p-3 font-medium">${item.peso !== '-' ? item.peso + ' kg' : '-'}</td>
-          <td class="p-3">${tratamentoTxt.length > 0 ? tratamentoTxt.join(' + ') : 'Nenhum'}</td>
-          <td class="p-3 truncate max-w-xs" title="${item.cirurgia}">${item.cirurgia}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getGrauBadgeClass(item.grauDisfagia)}">${item.grauDisfagia}</span></td>
+      tbody.innerHTML = data.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA).map(item => {
+        const trat = [];
+        if (item.rt === 'Sim') trat.push(`RT${item.doseNum ? ' (' + item.doseRT + ')' : ''}`);
+        if (item.qt === 'Sim') trat.push('QT');
+        return `<tr class="hover:bg-slate-50 transition border-b border-slate-100">
+          <td class="p-3 font-medium text-slate-700">${esc(item.data)}</td>
+          <td class="p-3 font-semibold text-indigo-600">${esc(item.prontuario)}</td>
+          <td class="p-3">${item.idade ?? '-'}</td>
+          <td class="p-3 font-medium">${item.peso !== '-' ? esc(item.peso) + ' kg' : '-'}</td>
+          <td class="p-3">${trat.length ? trat.join(' + ') : 'Nenhum'}</td>
+          <td class="p-3 truncate max-w-xs" title="${esc(item.cirurgia)}">${esc(item.cirurgia)}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getGrauBadgeClass(item.grauDisfagia)}">${esc(item.grauDisfagia)}</span></td>
           <td class="p-3 text-center font-bold">${item.fois || '-'}</td>
-          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.sne === 'Sim' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${item.sne}</span></td>
-          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.tqt === 'Sim' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'}">${item.tqt}</span></td>
-          <td class="p-3">${item.edema}</td>
-          <td class="p-3 truncate max-w-xs" title="${item.dietaAtual}">${item.dietaAtual}</td>
-          <td class="p-3 truncate max-w-xs" title="${item.dieta}">${item.dieta}</td>
-          <td class="p-3 text-xs text-slate-500">${item.exercicios}</td>
-        `;
-        tbody.appendChild(tr);
-      });
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.sne === 'Sim' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${esc(item.sondaTipo)}</span></td>
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.tqt === 'Sim' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'}">${esc(item.tqtStatus)}</span></td>
+          <td class="p-3">${esc(item.edema)}</td>
+          <td class="p-3 truncate max-w-xs" title="${esc(item.dietaAtual)}">${esc(item.dietaAtual)}</td>
+          <td class="p-3 truncate max-w-xs" title="${esc(item.dieta)}">${esc(item.dieta)}</td>
+          <td class="p-3 text-xs text-slate-500">${esc(item.exercicios)}</td></tr>`;
+      }).join('');
+      const btn = 'px-3 py-1 rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-40';
+      pg.innerHTML = `<span>${data.length} registros · página ${pagina + 1} de ${total}</span><div class="flex gap-2"><button class="${btn}" ${pagina === 0 ? 'disabled' : ''} onclick="irPagina(-1)">Anterior</button><button class="${btn}" ${pagina >= total - 1 ? 'disabled' : ''} onclick="irPagina(1)">Próxima</button></div>`;
+    }
+    function irPagina(d) { pagina += d; renderTabela(filtradosAtuais); }
+
+    function exportarCsv() {
+      const cab = ['Data', 'Paciente', 'Idade', 'Peso', 'RT', 'Dose RT', 'QT', 'Cirurgia', 'Grau Disfagia', 'FOIS', 'ASHA NOMS', 'Sonda', 'TQT', 'Edema', 'Dieta VO atual', 'Conduta dieta', 'Exercícios'];
+      const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+      const linhas = filtradosAtuais.map(d => [d.data, d.prontuario, d.idade, d.peso, d.rt, d.doseRT, d.qt, d.cirurgia, d.grauDisfagia, d.fois, d.asha, d.sondaTipo, d.tqtStatus, d.edema, d.dietaAtual, d.dieta, d.exercicios].map(q).join(';'));
+      const blob = new Blob(['\ufeff' + [cab.map(q).join(';'), ...linhas].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dashboard_fono_onco.csv'; a.click();
     }
 
     function getGrauBadgeClass(grau) {
@@ -809,212 +869,144 @@
       return 'bg-slate-100 text-slate-600';
     }
 
-    function renderGraficos(dadosParaExibir = parsedData) {
-      if (chartFaixaEtariaInst) chartFaixaEtariaInst.destroy();
-      if (chartDisfagiaInst) chartDisfagiaInst.destroy();
-      if (chartFOISInst) chartFOISInst.destroy();
-      if (chartCirurgiaDisfagiaInst) chartCirurgiaDisfagiaInst.destroy();
-      if (chartRTDisfagiaInst) chartRTDisfagiaInst.destroy();
+    const CH = {};
+    function mk(id, cfg) {
+      if (CH[id]) CH[id].destroy();
+      cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false }, cfg.options || {});
+      CH[id] = new Chart(document.getElementById(id), cfg);
+    }
+    function nota(id, txt) {
+      const c = document.getElementById(id).closest('.card');
+      let p = c.querySelector('.nota');
+      if (!p) { p = document.createElement('p'); p.className = 'nota text-xs text-slate-400 mt-2'; c.appendChild(p); }
+      p.textContent = txt;
+    }
+    const barras = (labels, data, cor, extra = {}) => ({ type: 'bar', data: { labels, datasets: [{ data, backgroundColor: cor }] }, options: { plugins: { legend: { display: false } }, ...extra } });
+    const mediana = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+    const serie = (a, k) => a.filter(d => d[k] != null).map(d => ({ d, v: d[k] }));
+    const NI = () => document.getElementById('showNI').checked;
 
-      // 1. Faixa Etária
-      const faixas = { '18-39 anos': 0, '40-59 anos': 0, '60-74 anos': 0, '75+ anos': 0, 'Não informada': 0 };
-      dadosParaExibir.forEach(d => {
-        if (!d.idade) faixas['Não informada']++;
-        else if (d.idade <= 39) faixas['18-39 anos']++;
-        else if (d.idade <= 59) faixas['40-59 anos']++;
-        else if (d.idade <= 74) faixas['60-74 anos']++;
-        else faixas['75+ anos']++;
-      });
-
-      chartFaixaEtariaInst = new Chart(document.getElementById('chartFaixaEtaria'), {
-        type: 'bar',
-        data: {
-          labels: Object.keys(faixas),
-          datasets: [{
-            label: 'Nº de Pacientes',
-            data: Object.values(faixas),
-            backgroundColor: '#4f46e5'
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-
-      // 2. Grau de Disfagia
-      const contagemGrau = {};
-      dadosParaExibir.forEach(d => contagemGrau[d.grauDisfagia] = (contagemGrau[d.grauDisfagia] || 0) + 1);
-
-      const labelsDisfagia = Object.keys(contagemGrau);
-      const dataDisfagia = Object.values(contagemGrau);
-      const indexNaoInformado = labelsDisfagia.indexOf('Não informado');
-
-      chartDisfagiaInst = new Chart(document.getElementById('chartDisfagia'), {
-        type: 'doughnut',
-        data: {
-          labels: labelsDisfagia,
-          datasets: [{
-            data: dataDisfagia,
-            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#d97706', '#ef4444', '#b91c1c', '#94a3b8']
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              onClick: (e, legendItem, legend) => {
-                const index = legendItem.index;
-                const ci = legend.chart;
-                if (ci.isDatasetVisible(0)) {
-                  ci.toggleDataVisibility(index);
-                  ci.update();
-                }
-              },
-              labels: {
-                generateLabels: (chart) => {
-                  const data = chart.data;
-                  if (data.labels.length && data.datasets.length) {
-                    return data.labels.map((label, i) => {
-                      const meta = chart.getDatasetMeta(0);
-                      const style = meta.controller.getStyle(i);
-                      return {
-                        text: label,
-                        fillStyle: style.backgroundColor,
-                        strokeStyle: style.borderColor,
-                        lineWidth: style.borderWidth,
-                        hidden: chart.getDataVisibility(i) === false,
-                        index: i
-                      };
-                    });
-                  }
-                  return [];
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (indexNaoInformado !== -1) {
-        chartDisfagiaInst.toggleDataVisibility(indexNaoInformado);
-        chartDisfagiaInst.update();
-      }
-
-      // 3. FOIS
-      const contagemFOIS = { 'Nível 1':0, 'Nível 2':0, 'Nível 3':0, 'Nível 4':0, 'Nível 5':0, 'Nível 6':0, 'Nível 7':0 };
-      dadosParaExibir.forEach(d => { if (d.fois) contagemFOIS[`Nível ${d.fois}`]++; });
-
-      chartFOISInst = new Chart(document.getElementById('chartFOIS'), {
-        type: 'bar',
-        data: {
-          labels: Object.keys(contagemFOIS),
-          datasets: [{
-            label: 'Nº Pacientes',
-            data: Object.values(contagemFOIS),
-            backgroundColor: '#0284c7'
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-
-      // 4. Cirurgia vs. Grau de Disfagia
-      const tiposCirurgias = ['Glossectomia', 'Laringectomia Total', 'Laringectomia Parcial', 'Esvaziamento Cervical', 'Mandibulectomia', 'Ressecção de Lesão'];
-      const grausDisfagia = ['Normal', 'Leve', 'Leve a Moderada', 'Moderada', 'Moderada a Grave', 'Grave'];
-      
-      const matrixCirurgia = tiposCirurgias.map(cx => {
-        return grausDisfagia.map(grau => {
-          return dadosParaExibir.filter(d => d.cirurgia.toLowerCase().includes(cx.toLowerCase()) && d.grauDisfagia === grau).length;
-        });
-      });
-
-      chartCirurgiaDisfagiaInst = new Chart(document.getElementById('chartCirurgiaDisfagia'), {
-        type: 'bar',
-        data: {
-          labels: tiposCirurgias,
-          datasets: grausDisfagia.map((grau, index) => ({
-            label: grau,
-            data: matrixCirurgia.map(row => row[index]),
-            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#d97706', '#ef4444', '#b91c1c'][index]
-          }))
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { x: { stacked: true }, y: { stacked: true } }
-        }
-      });
-
-      // 5. Dose RT vs. Grau de Disfagia
-      const faixasRT = ['Sem RT', '< 50 Gy', '50 - 66 Gy', '> 66 Gy'];
-      const matrixRT = faixasRT.map(faixa => {
-        return grausDisfagia.map(grau => {
-          return dadosParaExibir.filter(d => {
-            if (d.grauDisfagia !== grau) return false;
-            if (faixa === 'Sem RT' && d.rt === 'Não') return true;
-            if (faixa === '< 50 Gy' && d.rt === 'Sim' && d.doseNum > 0 && d.doseNum < 50) return true;
-            if (faixa === '50 - 66 Gy' && d.rt === 'Sim' && d.doseNum >= 50 && d.doseNum <= 66) return true;
-            if (faixa === '> 66 Gy' && d.rt === 'Sim' && d.doseNum > 66) return true;
-            return false;
-          }).length;
-        });
-      });
-
-      chartRTDisfagiaInst = new Chart(document.getElementById('chartRTDisfagia'), {
-        type: 'bar',
-        data: {
-          labels: faixasRT,
-          datasets: grausDisfagia.map((grau, index) => ({
-            label: grau,
-            data: matrixRT.map(row => row[index]),
-            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#d97706', '#ef4444', '#b91c1c'][index]
-          }))
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { x: { stacked: true }, y: { stacked: true } }
-        }
-      });
+    function pilha(id, labels, P, match) {
+      const gs = NI() ? [...GRAUS, 'Não informado'] : GRAUS;
+      mk(id, { type: 'bar', data: { labels, datasets: gs.map((g, i) => ({ label: g, backgroundColor: COR[i], data: labels.map(l => P.filter(p => p.grau === g && match(p, l)).length) })) }, options: { scales: { x: { stacked: true }, y: { stacked: true, title: { display: true, text: 'Pacientes' } } } } });
     }
 
-    function aplicarFiltros() {
-      const query = document.getElementById('tableSearch').value.toLowerCase();
+    function renderGraficos(dados) {
+      const pacs = agruparPacientes(dados);
+      const P = pacs.map(a => {
+        const l = a[a.length - 1], g = ultimo(a, d => d.grauDisfagia !== 'Não informado'), f = ultimo(a, d => d.fois);
+        return { a, grau: g ? g.grauDisfagia : 'Não informado', fois: f ? f.fois : null, idade: l.idade, faixa: l.faixa,
+          cirurgia: (a.find(d => d.cirurgia !== 'Não descrita') || { cirurgia: 'Não descrita' }).cirurgia,
+          rt: a.some(d => d.rt === 'Sim'), dose: Math.max(0, ...a.map(d => d.doseNum || 0)) };
+      });
+      const np = P.length, rodape = `n = ${np} pacientes (último registro de cada um)`;
 
-      const valGrau = document.getElementById('filterGrau').value;
-      const valFOIS = document.getElementById('filterFOIS').value;
-      const valSNE = document.getElementById('filterSNE').value;
-      const valTQT = document.getElementById('filterTQT').value;
+      // Faixa etária
+      const fx = ['Até 39 anos', '40-59 anos', '60-74 anos', '75+ anos'].concat(NI() ? ['Não informada'] : []);
+      mk('chartFaixaEtaria', barras(fx, fx.map(f => P.filter(p => p.faixa === f).length), '#4f46e5'));
+      nota('chartFaixaEtaria', rodape);
 
-      let filtrados = parsedData.filter(d => {
-        if (valGrau && d.grauDisfagia !== valGrau) return false;
-        if (valFOIS && (d.fois === null || d.fois.toString() !== valFOIS)) return false;
-        if (valSNE && d.sne !== valSNE) return false;
-        if (valTQT && d.tqt !== valTQT) return false;
+      // Grau de disfagia
+      const gl = NI() ? [...GRAUS, 'Não informado'] : GRAUS;
+      mk('chartDisfagia', { type: 'doughnut', data: { labels: gl, datasets: [{ data: gl.map(g => P.filter(p => p.grau === g).length), backgroundColor: COR }] }, options: { plugins: { legend: { position: 'right' } } } });
+      nota('chartDisfagia', rodape + (NI() ? '' : ` · ${P.filter(p => p.grau === 'Não informado').length} sem grau registrado (ocultos)`));
 
-        if (query) {
-          const textoRow = `${d.data} ${d.prontuario} ${d.grauDisfagia} ${d.dieta} ${d.dietaAtual} ${d.cirurgia} ${d.exercicios}`.toLowerCase();
-          if (!textoRow.includes(query)) return false;
-        }
+      // FOIS
+      const fl = [1, 2, 3, 4, 5, 6, 7].map(n => 'Nível ' + n);
+      mk('chartFOIS', barras(fl, [1, 2, 3, 4, 5, 6, 7].map(n => P.filter(p => p.fois === n).length), '#0284c7'));
+      nota('chartFOIS', `n = ${P.filter(p => p.fois).length} pacientes com FOIS registrado`);
 
+      // Cirurgia / RT / Idade x Grau
+      const cxs = CX.map(c => c[0]);
+      pilha('chartCirurgiaDisfagia', cxs, P, (p, l) => p.cirurgia === l); nota('chartCirurgiaDisfagia', rodape);
+      const fr = ['Sem RT descrita', 'RT, dose não descrita', '< 50 Gy', '50 - 66 Gy', '> 66 Gy'];
+      pilha('chartRTDisfagia', fr, P, (p, l) => l === fr[0] ? !p.rt : l === fr[1] ? p.rt && !p.dose : l === fr[2] ? p.dose > 0 && p.dose < 50 : l === fr[3] ? p.dose >= 50 && p.dose <= 66 : p.dose > 66);
+      nota('chartRTDisfagia', rodape + ' · a dose só aparece quando registrada na evolução/histórico');
+      pilha('chartIdadeGrau', fx.filter(f => f !== 'Não informada'), P, (p, l) => p.faixa === l); nota('chartIdadeGrau', rodape);
+
+      // Evolução FOIS / ASHA
+      const cmp = k => { const r = { Melhorou: 0, Igual: 0, Piorou: 0 }, dl = []; pacs.forEach(a => { const s = serie(a, k); if (s.length < 2) return; const d = s[s.length - 1].v - s[0].v; dl.push(d); r[d > 0 ? 'Melhorou' : d < 0 ? 'Piorou' : 'Igual']++; }); return { r, dl }; };
+      const cf = cmp('fois'), ca = cmp('asha');
+      mk('chartEvolResumo', { type: 'bar', data: { labels: ['Melhorou', 'Igual', 'Piorou'], datasets: [{ label: 'FOIS', data: Object.values(cf.r), backgroundColor: '#4f46e5' }, { label: 'ASHA NOMS', data: Object.values(ca.r), backgroundColor: '#0ea5e9' }] }, options: { scales: { y: { title: { display: true, text: 'Pacientes' } } } } });
+      const mm = x => x.length ? (x.reduce((p, c) => p + c, 0) / x.length).toFixed(2) : '–';
+      nota('chartEvolResumo', `Variação média: FOIS ${mm(cf.dl)} (n=${cf.dl.length}) · ASHA ${mm(ca.dl)} (n=${ca.dl.length})`);
+      const met = document.getElementById('evolMetric').value; let k = 0;
+      const ds = pacs.map(a => { const s = serie(a, met), b = a.find(d => d.ts != null); if (s.length < 2 || !b) return null; const off = ((k++ % 7) - 3) * 0.04;
+        return { data: s.filter(x => x.d.ts != null).map(x => ({ x: Math.round((x.d.ts - b.ts) / 864e5), y: x.v + off })), showLine: true, borderColor: '#6366f166', backgroundColor: '#4f46e5', borderWidth: 1.2, pointRadius: 2.5 }; }).filter(Boolean);
+      mk('chartSpag', { type: 'scatter', data: { datasets: ds }, options: { plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { title: { display: true, text: 'Dias desde o 1º atendimento' } }, y: { min: 0.5, max: 7.5, ticks: { stepSize: 1 } } } } });
+      nota('chartSpag', `${ds.length} pacientes com 2+ registros de ${met === 'fois' ? 'FOIS' : 'ASHA NOMS'}`);
+
+      // Exercícios
+      const ex = EXS.map(([n]) => { const ps = pacs.filter(a => a.some(d => d.exList.includes(n))); const ev = ps.map(a => serie(a, 'fois')).filter(s => s.length > 1); return { n, np: ps.length, ne: ev.length, mel: ev.filter(s => s[s.length - 1].v > s[0].v).length }; }).filter(e => e.np).sort((a, b) => b.np - a.np);
+      mk('chartExFreq', barras(ex.map(e => e.n), ex.map(e => e.np), '#7c3aed', { indexAxis: 'y' }));
+      nota('chartExFreq', `Exercícios identificados nas condutas de ${np} pacientes`);
+      const em = ex.filter(e => e.ne);
+      mk('chartExMelhora', barras(em.map(e => `${e.n} (n=${e.ne})`), em.map(e => Math.round(e.mel / e.ne * 100)), '#059669', { indexAxis: 'y', scales: { x: { min: 0, max: 100, title: { display: true, text: '% com melhora do FOIS' } } } }));
+      nota('chartExMelhora', 'Pacientes que receberam o exercício em algum atendimento e têm 2+ registros de FOIS');
+
+      // Transição de dieta
+      const ok = d => NI() || d.dietaAtual !== 'Não informada';
+      const tr = pacs.map(a => a.filter(ok)).filter(a => a.length > 1);
+      const cats = [...new Set(tr.flatMap(a => [a[0].dietaAtual, a[a.length - 1].dietaAtual]))];
+      mk('chartDietaTrans', { type: 'bar', data: { labels: cats, datasets: [{ label: 'Primeiro', data: cats.map(c => tr.filter(a => a[0].dietaAtual === c).length), backgroundColor: '#94a3b8' }, { label: 'Último', data: cats.map(c => tr.filter(a => a[a.length - 1].dietaAtual === c).length), backgroundColor: '#4f46e5' }] }, options: { scales: { y: { title: { display: true, text: 'Pacientes' } } } } });
+      nota('chartDietaTrans', `n = ${tr.length} pacientes com 2+ atendimentos com dieta registrada`);
+
+      // Linha do tempo
+      const cs = dados.filter(d => d.ts != null);
+      if (cs.length) {
+        const ms = cs.map(d => d.ts), a0 = new Date(Math.min(...ms)), a1 = new Date(Math.max(...ms)), lab = [];
+        for (let y = a0.getUTCFullYear(), m = a0.getUTCMonth(); y < a1.getUTCFullYear() || (y === a1.getUTCFullYear() && m <= a1.getUTCMonth()); m++) { if (m > 11) { m = 0; y++; } lab.push(`${y}-${String(m + 1).padStart(2, '0')}`); }
+        const key = d => new Date(d.ts).toISOString().slice(0, 7);
+        mk('chartTempo', { data: { labels: lab, datasets: [{ type: 'bar', label: 'Atendimentos', data: lab.map(l => cs.filter(d => key(d) === l).length), backgroundColor: '#818cf8' }, { type: 'line', label: 'Pacientes únicos', data: lab.map(l => new Set(cs.filter(d => key(d) === l).map(d => d.prontuarioRaw)).size), borderColor: '#0f766e', backgroundColor: '#0f766e', tension: .25, pointRadius: 2 }] } });
+        nota('chartTempo', `${cs.length} atendimentos com data válida`);
+      }
+
+      // Perfil
+      const bin = (v, lim) => lim.findIndex(l => v <= l);
+      const ns = pacs.map(a => a.length), bs = [1, 2, 3, 5, 10, Infinity], ls = ['1', '2', '3', '4-5', '6-10', '11+'];
+      mk('chartSessoes', barras(ls, ls.map((_, i) => ns.filter(n => bin(n, bs) === i).length), '#0284c7'));
+      nota('chartSessoes', `Mediana: ${mediana(ns) ?? '–'} atendimentos por paciente (n = ${np})`);
+      const iv = pacs.flatMap(a => { const t = a.filter(d => d.ts != null); return t.slice(1).map((d, i) => (d.ts - t[i].ts) / 864e5); });
+      const bi = [14, 30, 60, 90, Infinity], li = ['≤ 14 d', '15-30 d', '31-60 d', '61-90 d', '> 90 d'];
+      mk('chartIntervalo', barras(li, li.map((_, i) => iv.filter(v => bin(v, bi) === i).length), '#d97706'));
+      nota('chartIntervalo', `Mediana: ${mediana(iv) ?? '–'} dias (${iv.length} intervalos)`);
+
+      // FOIS médio por grupo
+      const grp = [['Com TQT', a => a.some(d => d.tqt === 'Sim')], ['Sem TQT', a => !a.some(d => d.tqt === 'Sim')], ['Antecedente de RT', a => a.some(d => d.rt === 'Sim')], ['Sem RT descrita', a => !a.some(d => d.rt === 'Sim')], ['Com sonda', a => a.some(d => d.sne === 'Sim')], ['Sem sonda', a => !a.some(d => d.sne === 'Sim')]];
+      const gv = grp.map(([n, f]) => { const v = pacs.filter(f).map(a => (a.find(d => d.fois) || {}).fois).filter(Boolean); return { l: `${n} (n=${v.length})`, m: v.length ? +(v.reduce((p, c) => p + c, 0) / v.length).toFixed(2) : 0 }; });
+      mk('chartFoisGrupos', barras(gv.map(g => g.l), gv.map(g => g.m), ['#ef4444', '#fca5a5', '#f59e0b', '#fcd34d', '#8b5cf6', '#c4b5fd'], { scales: { y: { min: 0, max: 7, title: { display: true, text: 'FOIS médio (1-7)' } } } }));
+      nota('chartFoisGrupos', 'FOIS do primeiro atendimento com a escala registrada');
+    }
+
+    function aplicarFiltros(resetPag = true) {
+      const q = document.getElementById('tableSearch').value.toLowerCase();
+      const v = id => document.getElementById(id).value;
+      const mes = (s, fim) => { if (!s) return null; const [y, m] = s.split('-').map(Number); return Date.UTC(y, fim ? m : m - 1, 1); };
+      const de = mes(v('filtroDe'), false), ate = mes(v('filtroAte'), true);
+      const f = parsedData.filter(d => {
+        if (v('filterGrau') && d.grauDisfagia !== v('filterGrau')) return false;
+        if (v('filterFOIS') && (d.fois === null || d.fois.toString() !== v('filterFOIS'))) return false;
+        if (v('filterSNE') && d.sne !== v('filterSNE')) return false;
+        if (v('filterTQT') && d.tqt !== v('filterTQT')) return false;
+        if (v('filtroFaixa') && d.faixa !== v('filtroFaixa')) return false;
+        if ((de !== null || ate !== null) && d.ts === null) return false;
+        if (de !== null && d.ts < de) return false;
+        if (ate !== null && d.ts >= ate) return false;
+        if (q && !`${d.data} ${d.prontuario} ${d.grauDisfagia} ${d.dieta} ${d.dietaAtual} ${d.cirurgia} ${d.exercicios}`.toLowerCase().includes(q)) return false;
         return true;
       });
-
-      if (currentSortColumn) {
-        filtrados.sort((a, b) => compararValores(a, b, currentSortColumn, currentSortDirection));
-      }
-
-      renderTabela(filtrados);
-      renderGraficos(filtrados);
-      atualizarIconesOrdenacao();
+      if (currentSortColumn) f.sort((a, b) => compararValores(a, b, currentSortColumn, currentSortDirection));
+      if (resetPag) pagina = 0;
+      atualizarKPIs(f); renderTabela(f); renderGraficos(f); atualizarIconesOrdenacao();
     }
 
-    document.querySelectorAll('.filter-trigger').forEach(el => el.addEventListener('change', aplicarFiltros));
-    document.getElementById('tableSearch').addEventListener('input', aplicarFiltros);
-
+    document.querySelectorAll('.filter-trigger, #filtroDe, #filtroAte, #filtroFaixa, #showNI, #evolMetric').forEach(el => el.addEventListener('change', () => aplicarFiltros()));
+    document.getElementById('tableSearch').addEventListener('input', () => aplicarFiltros());
+    document.getElementById('exportCsv').addEventListener('click', exportarCsv);
     document.getElementById('resetFilters').addEventListener('click', () => {
       document.getElementById('tableSearch').value = '';
-      document.querySelectorAll('.filter-trigger').forEach(select => select.value = '');
-      currentSortColumn = null;
-      currentSortDirection = 'asc';
+      document.querySelectorAll('.filter-trigger, #filtroDe, #filtroAte, #filtroFaixa').forEach(e => e.value = '');
+      currentSortColumn = null; currentSortDirection = 'asc';
       aplicarFiltros();
     });
   </script>
