@@ -33,6 +33,23 @@
       width: 100%;
       text-transform: none;
     }
+      .print-only { display: none; }
+    html.dark body { background: #0f172a; color: #e2e8f0; }
+    html.dark .card, html.dark .bg-white { background: #1e293b; border-color: #334155; }
+    html.dark .text-slate-800, html.dark .text-slate-700, html.dark .text-slate-600 { color: #e2e8f0; }
+    html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8; }
+    html.dark .bg-slate-50, html.dark .hover\:bg-slate-50:hover { background: #273449; }
+    html.dark .border-slate-100, html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155; }
+    html.dark .table-select { background: #0f172a; color: #e2e8f0; border-color: #475569; color-scheme: dark; }
+    html.dark thead, html.dark th { background: #273449; color: #cbd5e1; }
+    @media print {
+      @page { margin: 12mm; }
+      body { background: #fff !important; padding: 0 !important; }
+      .no-print, #statusAlert, .table-card { display: none !important; }
+      .print-only { display: block; }
+      .card { break-inside: avoid; box-shadow: none; }
+      h2 { break-after: avoid; }
+    }
   </style>
 </head>
 <body class="p-6 flex flex-col min-h-screen">
@@ -45,7 +62,9 @@
     </div>
 
     <!-- Upload de Planilha Local -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 no-print">
+      <button id="btnTema" title="Alternar modo claro/escuro" class="card px-3 py-2.5 text-slate-600"><i class="fa-solid fa-moon"></i></button>
+      <button id="btnImprimir" title="Imprimir ou salvar como PDF" class="card px-3 py-2.5 text-slate-600 text-sm font-medium"><i class="fa-solid fa-print mr-1"></i>Relatório PDF</button>
       <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow">
         <i class="fa-solid fa-file-excel"></i>
         <span>Carregar Planilha Excel</span>
@@ -53,6 +72,7 @@
       </label>
     </div>
   </header>
+  <div class="print-only mb-4 text-sm text-slate-600" id="printInfo"></div>
 
   <!-- Status / Informação de Privacidade -->
   <div id="statusAlert" class="mb-6 card p-4 border-l-4 border-emerald-500 flex items-center justify-between">
@@ -66,13 +86,11 @@
     <span id="totalRecordsBadge" class="hidden bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">0 registros</span>
   </div>
 
-  <!-- Filtros globais -->
-  <div class="card p-4 mb-6 flex flex-wrap items-end gap-4 text-sm text-slate-600">
-    <label class="flex flex-col text-xs font-semibold">De<input type="month" id="filtroDe" class="table-select !w-auto !text-sm"></label>
-    <label class="flex flex-col text-xs font-semibold">Até<input type="month" id="filtroAte" class="table-select !w-auto !text-sm"></label>
-    <label class="flex flex-col text-xs font-semibold">Faixa etária<select id="filtroFaixa" class="table-select !w-auto !text-sm"><option value="">Todas</option><option>Até 39 anos</option><option>40-59 anos</option><option>60-74 anos</option><option>75+ anos</option></select></label>
-    <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer pb-1"><input type="checkbox" id="showNI"> Mostrar "Não informado/a" nos gráficos</label>
-    <span class="text-xs text-slate-400 pb-1">Os filtros da tabela (grau, FOIS, SNE, TQT) também atualizam gráficos e KPIs.</span>
+  <!-- Filtro de período -->
+  <div class="card p-4 mb-6 flex flex-wrap items-end gap-4 text-sm text-slate-600 no-print">
+    <label class="flex flex-col text-xs font-semibold">De<input type="date" id="filtroDe" class="table-select !w-auto !text-sm" onkeydown="if(event.key!=='Tab')return false" onclick="this.showPicker&&this.showPicker()"></label>
+    <label class="flex flex-col text-xs font-semibold">Até<input type="date" id="filtroAte" class="table-select !w-auto !text-sm" onkeydown="if(event.key!=='Tab')return false" onclick="this.showPicker&&this.showPicker()"></label>
+    <span class="text-xs text-slate-400 pb-1">Clique no campo para escolher no calendário. Os filtros da tabela (grau, FOIS, SNE, TQT) também atualizam gráficos e KPIs.</span>
   </div>
 
   <!-- Cards KPI -->
@@ -138,7 +156,7 @@
     </div>
 
     <div class="card p-5">
-      <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-indigo-500"></i> Grau de Disfagia</h3>
+      <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-indigo-500"></i> Grau de Disfagia <label class="ml-auto text-xs font-normal text-slate-500 cursor-pointer flex items-center gap-1"><input type="checkbox" id="showNI"> Mostrar "Não informado"</label></h3>
       <div class="relative h-64">
         <canvas id="chartDisfagia"></canvas>
       </div>
@@ -173,28 +191,21 @@
 
   <h2 class="text-lg font-bold text-slate-700 mb-3 mt-2"><i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>Evolução e acompanhamento</h2>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">FOIS e ASHA: primeiro → último atendimento</h3><p class="text-xs text-slate-400 mb-4">Pacientes com 2+ registros da escala</p></div></div><div class="relative h-72"><canvas id="chartEvolResumo"></canvas></div></div>
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Trajetória individual</h3><p class="text-xs text-slate-400 mb-4">Cada linha é um paciente (leve deslocamento vertical para não sobrepor)</p></div><select id="evolMetric" class="table-select !w-auto"><option value="fois">FOIS</option><option value="asha">ASHA NOMS</option></select></div><div class="relative h-72"><canvas id="chartSpag"></canvas></div></div>
+    <div class="card p-5"><h3 class="font-bold text-slate-700 mb-1">Mudança de FOIS e ASHA NOMS entre o primeiro e o último atendimento</h3><p class="text-xs text-slate-400 mb-4">Quantos pacientes melhoraram, ficaram iguais ou pioraram na escala (compara o primeiro e o último registro de cada paciente)</p><div class="relative h-72"><canvas id="chartEvolResumo"></canvas></div></div>
+    <div class="card p-5"><h3 class="font-bold text-slate-700 mb-1">Atendimentos por mês</h3><p class="text-xs text-slate-400 mb-4">Meses sem registro aparecem vazios</p><div class="relative h-72"><canvas id="chartTempo"></canvas></div></div>
   </div>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Exercícios mais prescritos</h3><p class="text-xs text-slate-400 mb-4">Nº de pacientes que receberam cada exercício</p></div></div><div class="relative h-72"><canvas id="chartExFreq"></canvas></div></div>
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Exercícios × melhora do FOIS</h3><p class="text-xs text-slate-400 mb-4">% de pacientes com FOIS final maior que o inicial (n entre parênteses). Descritivo, não indica causalidade.</p></div></div><div class="relative h-72"><canvas id="chartExMelhora"></canvas></div></div>
+    <div class="card p-5"><h3 class="font-bold text-slate-700 mb-1">Exercícios mais prescritos</h3><p class="text-xs text-slate-400 mb-4">Nº de pacientes que receberam cada exercício</p><div class="relative h-72"><canvas id="chartExFreq"></canvas></div></div>
+    <div class="card p-5"><h3 class="font-bold text-slate-700 mb-1">Exercícios × pacientes que melhoraram o FOIS</h3><p class="text-xs text-slate-400 mb-4">Entre os pacientes que fizeram o exercício e têm 2+ registros de FOIS: % cujo FOIS final ficou maior que o inicial. Não mede o tamanho da melhora nem prova causa.</p><div class="relative h-72"><canvas id="chartExMelhora"></canvas></div></div>
   </div>
+  <h2 class="text-lg font-bold text-slate-700 mb-3 mt-2"><i class="fa-solid fa-user-group text-indigo-500 mr-2"></i>Perfil dos pacientes</h2>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Transição de dieta: primeiro vs. último atendimento</h3><p class="text-xs text-slate-400 mb-4">Pacientes com 2+ atendimentos</p></div></div><div class="relative h-72"><canvas id="chartDietaTrans"></canvas></div></div>
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Atendimentos por mês</h3><p class="text-xs text-slate-400 mb-4">Meses sem registro aparecem vazios</p></div></div><div class="relative h-72"><canvas id="chartTempo"></canvas></div></div>
+    <div class="card p-5"><h3 class="font-bold text-slate-700 mb-1">Sessões por paciente</h3><p class="text-xs text-slate-400 mb-4">Distribuição do nº de atendimentos</p><div class="relative h-72"><canvas id="chartSessoes"></canvas></div></div>
+    <div class="card p-5"><h3 class="font-bold text-slate-700 mb-1">Intervalo entre sessões</h3><p class="text-xs text-slate-400 mb-4">Dias entre atendimentos consecutivos do mesmo paciente</p><div class="relative h-72"><canvas id="chartIntervalo"></canvas></div></div>
   </div>
-  <h2 class="text-lg font-bold text-slate-700 mb-3 mt-2"><i class="fa-solid fa-user-group text-indigo-500 mr-2"></i>Perfil e cruzamentos</h2>
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Sessões por paciente</h3><p class="text-xs text-slate-400 mb-4">Distribuição do nº de atendimentos</p></div></div><div class="relative h-72"><canvas id="chartSessoes"></canvas></div></div>
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Intervalo entre sessões</h3><p class="text-xs text-slate-400 mb-4">Dias entre atendimentos consecutivos do mesmo paciente</p></div></div><div class="relative h-72"><canvas id="chartIntervalo"></canvas></div></div>
-  </div>
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">FOIS médio no 1º registro, por grupo</h3><p class="text-xs text-slate-400 mb-4">Compara pacientes com e sem cada característica (n no rótulo)</p></div></div><div class="relative h-72"><canvas id="chartFoisGrupos"></canvas></div></div>
-    <div class="card p-5"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-slate-700 mb-1">Faixa etária × Grau de disfagia</h3><p class="text-xs text-slate-400 mb-4">Grau do último registro de cada paciente</p></div></div><div class="relative h-72"><canvas id="chartIdadeGrau"></canvas></div></div>
-  </div>
+  <div class="mb-6"><div class="card p-5"><h3 class="font-bold text-slate-700 mb-1">Faixa etária × Grau de disfagia</h3><p class="text-xs text-slate-400 mb-4">Grau do último registro de cada paciente</p><div class="relative h-72"><canvas id="chartIdadeGrau"></canvas></div></div></div>
   <!-- Tabela de Dados -->
-  <div class="card p-5 mb-8">
+  <div class="table-card card p-5 mb-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
       <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-table text-indigo-500"></i> Registros Estruturados via Regex</h3>
       
@@ -884,7 +895,7 @@
     const barras = (labels, data, cor, extra = {}) => ({ type: 'bar', data: { labels, datasets: [{ data, backgroundColor: cor }] }, options: { plugins: { legend: { display: false } }, ...extra } });
     const mediana = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
     const serie = (a, k) => a.filter(d => d[k] != null).map(d => ({ d, v: d[k] }));
-    const NI = () => document.getElementById('showNI').checked;
+    const NI = () => false, NID = () => document.getElementById('showNI').checked;
 
     function pilha(id, labels, P, match) {
       const gs = NI() ? [...GRAUS, 'Não informado'] : GRAUS;
@@ -907,9 +918,9 @@
       nota('chartFaixaEtaria', rodape);
 
       // Grau de disfagia
-      const gl = NI() ? [...GRAUS, 'Não informado'] : GRAUS;
+      const gl = NID() ? [...GRAUS, 'Não informado'] : GRAUS;
       mk('chartDisfagia', { type: 'doughnut', data: { labels: gl, datasets: [{ data: gl.map(g => P.filter(p => p.grau === g).length), backgroundColor: COR }] }, options: { plugins: { legend: { position: 'right' } } } });
-      nota('chartDisfagia', rodape + (NI() ? '' : ` · ${P.filter(p => p.grau === 'Não informado').length} sem grau registrado (ocultos)`));
+      nota('chartDisfagia', rodape + (NID() ? '' : ` · ${P.filter(p => p.grau === 'Não informado').length} sem grau registrado (ocultos)`));
 
       // FOIS
       const fl = [1, 2, 3, 4, 5, 6, 7].map(n => 'Nível ' + n);
@@ -927,29 +938,16 @@
       // Evolução FOIS / ASHA
       const cmp = k => { const r = { Melhorou: 0, Igual: 0, Piorou: 0 }, dl = []; pacs.forEach(a => { const s = serie(a, k); if (s.length < 2) return; const d = s[s.length - 1].v - s[0].v; dl.push(d); r[d > 0 ? 'Melhorou' : d < 0 ? 'Piorou' : 'Igual']++; }); return { r, dl }; };
       const cf = cmp('fois'), ca = cmp('asha');
-      mk('chartEvolResumo', { type: 'bar', data: { labels: ['Melhorou', 'Igual', 'Piorou'], datasets: [{ label: 'FOIS', data: Object.values(cf.r), backgroundColor: '#4f46e5' }, { label: 'ASHA NOMS', data: Object.values(ca.r), backgroundColor: '#0ea5e9' }] }, options: { scales: { y: { title: { display: true, text: 'Pacientes' } } } } });
+      mk('chartEvolResumo', { type: 'bar', data: { labels: ['FOIS', 'ASHA NOMS'], datasets: [['Melhorou', '#10b981'], ['Igual', '#94a3b8'], ['Piorou', '#ef4444']].map(([l, c]) => ({ label: l, backgroundColor: c, data: [cf.r[l], ca.r[l]] })) }, options: { indexAxis: 'y', scales: { x: { stacked: true, title: { display: true, text: 'Pacientes' } }, y: { stacked: true } }, plugins: { tooltip: { callbacks: { label: c => { const t = c.chart.data.datasets.reduce((p, d) => p + d.data[c.dataIndex], 0); return `${c.dataset.label}: ${c.raw} pacientes (${t ? Math.round(c.raw / t * 100) : 0}%)`; } } } } } });
       const mm = x => x.length ? (x.reduce((p, c) => p + c, 0) / x.length).toFixed(2) : '–';
-      nota('chartEvolResumo', `Variação média: FOIS ${mm(cf.dl)} (n=${cf.dl.length}) · ASHA ${mm(ca.dl)} (n=${ca.dl.length})`);
-      const met = document.getElementById('evolMetric').value; let k = 0;
-      const ds = pacs.map(a => { const s = serie(a, met), b = a.find(d => d.ts != null); if (s.length < 2 || !b) return null; const off = ((k++ % 7) - 3) * 0.04;
-        return { data: s.filter(x => x.d.ts != null).map(x => ({ x: Math.round((x.d.ts - b.ts) / 864e5), y: x.v + off })), showLine: true, borderColor: '#6366f166', backgroundColor: '#4f46e5', borderWidth: 1.2, pointRadius: 2.5 }; }).filter(Boolean);
-      mk('chartSpag', { type: 'scatter', data: { datasets: ds }, options: { plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { title: { display: true, text: 'Dias desde o 1º atendimento' } }, y: { min: 0.5, max: 7.5, ticks: { stepSize: 1 } } } } });
-      nota('chartSpag', `${ds.length} pacientes com 2+ registros de ${met === 'fois' ? 'FOIS' : 'ASHA NOMS'}`);
-
+      nota('chartEvolResumo', `Pacientes com 2+ registros: FOIS ${cf.dl.length} · ASHA ${ca.dl.length}. Variação média de pontos: FOIS ${mm(cf.dl)} · ASHA ${mm(ca.dl)}`);
       // Exercícios
       const ex = EXS.map(([n]) => { const ps = pacs.filter(a => a.some(d => d.exList.includes(n))); const ev = ps.map(a => serie(a, 'fois')).filter(s => s.length > 1); return { n, np: ps.length, ne: ev.length, mel: ev.filter(s => s[s.length - 1].v > s[0].v).length }; }).filter(e => e.np).sort((a, b) => b.np - a.np);
       mk('chartExFreq', barras(ex.map(e => e.n), ex.map(e => e.np), '#7c3aed', { indexAxis: 'y' }));
       nota('chartExFreq', `Exercícios identificados nas condutas de ${np} pacientes`);
       const em = ex.filter(e => e.ne);
-      mk('chartExMelhora', barras(em.map(e => `${e.n} (n=${e.ne})`), em.map(e => Math.round(e.mel / e.ne * 100)), '#059669', { indexAxis: 'y', scales: { x: { min: 0, max: 100, title: { display: true, text: '% com melhora do FOIS' } } } }));
-      nota('chartExMelhora', 'Pacientes que receberam o exercício em algum atendimento e têm 2+ registros de FOIS');
-
-      // Transição de dieta
-      const ok = d => NI() || d.dietaAtual !== 'Não informada';
-      const tr = pacs.map(a => a.filter(ok)).filter(a => a.length > 1);
-      const cats = [...new Set(tr.flatMap(a => [a[0].dietaAtual, a[a.length - 1].dietaAtual]))];
-      mk('chartDietaTrans', { type: 'bar', data: { labels: cats, datasets: [{ label: 'Primeiro', data: cats.map(c => tr.filter(a => a[0].dietaAtual === c).length), backgroundColor: '#94a3b8' }, { label: 'Último', data: cats.map(c => tr.filter(a => a[a.length - 1].dietaAtual === c).length), backgroundColor: '#4f46e5' }] }, options: { scales: { y: { title: { display: true, text: 'Pacientes' } } } } });
-      nota('chartDietaTrans', `n = ${tr.length} pacientes com 2+ atendimentos com dieta registrada`);
+      mk('chartExMelhora', barras(em.map(e => `${e.n} (${e.mel} de ${e.ne})`), em.map(e => Math.round(e.mel / e.ne * 100)), '#059669', { indexAxis: 'y', scales: { x: { min: 0, max: 100, title: { display: true, text: '% dos pacientes cujo FOIS aumentou' } } } }));
+      nota('chartExMelhora', 'Entre parênteses: pacientes que melhoraram de quantos foram avaliados.');
 
       // Linha do tempo
       const cs = dados.filter(d => d.ts != null);
@@ -971,24 +969,18 @@
       mk('chartIntervalo', barras(li, li.map((_, i) => iv.filter(v => bin(v, bi) === i).length), '#d97706'));
       nota('chartIntervalo', `Mediana: ${mediana(iv) ?? '–'} dias (${iv.length} intervalos)`);
 
-      // FOIS médio por grupo
-      const grp = [['Com TQT', a => a.some(d => d.tqt === 'Sim')], ['Sem TQT', a => !a.some(d => d.tqt === 'Sim')], ['Antecedente de RT', a => a.some(d => d.rt === 'Sim')], ['Sem RT descrita', a => !a.some(d => d.rt === 'Sim')], ['Com sonda', a => a.some(d => d.sne === 'Sim')], ['Sem sonda', a => !a.some(d => d.sne === 'Sim')]];
-      const gv = grp.map(([n, f]) => { const v = pacs.filter(f).map(a => (a.find(d => d.fois) || {}).fois).filter(Boolean); return { l: `${n} (n=${v.length})`, m: v.length ? +(v.reduce((p, c) => p + c, 0) / v.length).toFixed(2) : 0 }; });
-      mk('chartFoisGrupos', barras(gv.map(g => g.l), gv.map(g => g.m), ['#ef4444', '#fca5a5', '#f59e0b', '#fcd34d', '#8b5cf6', '#c4b5fd'], { scales: { y: { min: 0, max: 7, title: { display: true, text: 'FOIS médio (1-7)' } } } }));
-      nota('chartFoisGrupos', 'FOIS do primeiro atendimento com a escala registrada');
-    }
+          }
 
     function aplicarFiltros(resetPag = true) {
       const q = document.getElementById('tableSearch').value.toLowerCase();
       const v = id => document.getElementById(id).value;
-      const mes = (s, fim) => { if (!s) return null; const [y, m] = s.split('-').map(Number); return Date.UTC(y, fim ? m : m - 1, 1); };
-      const de = mes(v('filtroDe'), false), ate = mes(v('filtroAte'), true);
+      const dia = (x, add) => x ? Date.parse(x + 'T00:00:00Z') + add * 864e5 : null;
+      const de = dia(v('filtroDe'), 0), ate = dia(v('filtroAte'), 1);
       const f = parsedData.filter(d => {
         if (v('filterGrau') && d.grauDisfagia !== v('filterGrau')) return false;
         if (v('filterFOIS') && (d.fois === null || d.fois.toString() !== v('filterFOIS'))) return false;
         if (v('filterSNE') && d.sne !== v('filterSNE')) return false;
         if (v('filterTQT') && d.tqt !== v('filterTQT')) return false;
-        if (v('filtroFaixa') && d.faixa !== v('filtroFaixa')) return false;
         if ((de !== null || ate !== null) && d.ts === null) return false;
         if (de !== null && d.ts < de) return false;
         if (ate !== null && d.ts >= ate) return false;
@@ -1009,6 +1001,32 @@
       currentSortColumn = null; currentSortDirection = 'asc';
       aplicarFiltros();
     });
+  
+    // Tema claro/escuro e relatório para impressão/PDF
+    const animOrig = Chart.defaults.animation;
+    function aplicarTema(escuro) {
+      document.documentElement.classList.toggle('dark', escuro);
+      Chart.defaults.color = escuro ? '#cbd5e1' : '#475569';
+      Chart.defaults.borderColor = escuro ? '#334155' : '#e2e8f0';
+      document.getElementById('btnTema').innerHTML = escuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+      if (parsedData.length) aplicarFiltros(false);
+    }
+    let temaEscuro = false;
+    try { temaEscuro = localStorage.getItem('tema') === 'dark'; } catch (e) {}
+    document.getElementById('btnTema').addEventListener('click', () => {
+      temaEscuro = !temaEscuro;
+      try { localStorage.setItem('tema', temaEscuro ? 'dark' : 'light'); } catch (e) {}
+      aplicarTema(temaEscuro);
+    });
+    document.getElementById('btnImprimir').addEventListener('click', () => window.print());
+    window.addEventListener('beforeprint', () => {
+      const f = x => x ? x.split('-').reverse().join('/') : '';
+      const de = f(document.getElementById('filtroDe').value), ate = f(document.getElementById('filtroAte').value);
+      document.getElementById('printInfo').innerText = `Dashboard Fono Onco · relatório gerado em ${new Date().toLocaleDateString('pt-BR')}` + (de || ate ? ` · período: ${de || 'início'} a ${ate || 'hoje'}` : ' · todo o período') + (parsedData.length ? ` · ${document.getElementById('kpiTotalAtendimentos').innerText} atendimentos, ${document.getElementById('kpiPacientesUnicos').innerText} pacientes` : '');
+      Chart.defaults.animation = false; aplicarTema(false);
+    });
+    window.addEventListener('afterprint', () => { Chart.defaults.animation = animOrig; aplicarTema(temaEscuro); });
+    aplicarTema(temaEscuro);
   </script>
 </body>
 </html>
