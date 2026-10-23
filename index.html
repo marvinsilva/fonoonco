@@ -38,6 +38,7 @@
     html.dark .card, html.dark .bg-white { background: #1e293b; border-color: #334155; }
     html.dark .text-slate-800, html.dark .text-slate-700, html.dark .text-slate-600 { color: #e2e8f0; }
     html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8; }
+    html.dark .bg-slate-100 { background: #334155; }
     html.dark .bg-slate-50, html.dark .hover\:bg-slate-50:hover { background: #273449; }
     html.dark .border-slate-100, html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155; }
     html.dark .table-select { background: #0f172a; color: #e2e8f0; border-color: #475569; color-scheme: dark; }
@@ -318,18 +319,21 @@
                 <span>Dieta VO Atual</span>
                 <i id="sort-icon-dietaAtual" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
               </div>
+              <select id="filterDietaAtual" class="table-select filter-trigger" onclick="event.stopPropagation()"><option value="">Todos</option></select>
             </th>
             <th class="p-3 align-top">
               <div onclick="ordenarPor('dieta')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
                 <span>Conduta Dieta</span>
                 <i id="sort-icon-dieta" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
               </div>
+              <select id="filterDieta" class="table-select filter-trigger" onclick="event.stopPropagation()"><option value="">Todos</option></select>
             </th>
             <th class="p-3 align-top">
               <div onclick="ordenarPor('exercicios')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
                 <span>Exercícios</span>
                 <i id="sort-icon-exercicios" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
               </div>
+              <select id="filterEx" class="table-select filter-trigger" onclick="event.stopPropagation()"><option value="">Todos</option></select>
             </th>
           </tr>
         </thead>
@@ -671,10 +675,9 @@
     function extrairDadosEvolucao(evol, hist) {
       const E = extrairBase(evol), H = extrairBase(hist || '');
       const t = (evol || '').replace(/\s+/g, ' ').toLowerCase(), th = (hist || '').toLowerCase();
-      let tqtStatus = 'Não';
-      if (/\bdecanulad[oa]\b/.test(t)) tqtStatus = 'Decanulado';
-      else if (/c[âa]nula\s*(ocluíd|ocluid|fechad)|decanula[çc][ãa]o/.test(t)) tqtStatus = 'Em decanulação';
-      else if (/\btqt\b|traqueostomia|c[âa]nula/.test(t)) tqtStatus = 'Com TQT';
+      const semTqt = /\bdecanulad[oa]\b|decanula[çc][ãa]o\s*(realizada|efetuada)|\bsem\s*(tqt|traqueostomia|c[âa]nula)|(retirad[ao]|removid[ao])\s*(a\s*)?(tqt|traqueostomia|c[âa]nula)|\btqt\s*[:\-]?\s*(n[ãa]o|ausente)/.test(t);
+      const tqtAtivo = !semTqt && /\btqt\b|traqueostomia|c[âa]nula/.test(t);
+      const tqtStatus = tqtAtivo ? 'Sim' : 'Não';
       const tipo = /\b(gtt|gastrostomia)\b/.test(t) ? 'GTT' : /\b(jej|jejunostomia)\b/.test(t) ? 'JEJ' : /\bsne\b|nasoent|sonda\s*enteral/.test(t) ? 'SNE' : null;
       const negada = /(sem|retirad[ao]|retirou|removid[ao]|suspens[ao]|desmam\w*|alta d[ea])\s[^.;]{0,25}\b(sne|sonda|gtt|gastrostomia|jejunostomia)/.test(t);
       const sondaTipo = (tipo && !negada) ? tipo : 'Não';
@@ -684,7 +687,7 @@
       return { ...E,
         grauDisfagia: evol ? detectarGrau(evol) : 'Não informado',
         sne: sondaTipo !== 'Não' ? 'Sim' : 'Não', sondaTipo,
-        tqt: (tqtStatus === 'Com TQT' || tqtStatus === 'Em decanulação') ? 'Sim' : 'Não', tqtStatus,
+        tqt: tqtStatus, tqtStatus,
         rt: (H.rt === 'Sim' || E.rt === 'Sim') ? 'Sim' : 'Não', qt: (H.qt === 'Sim' || E.qt === 'Sim') ? 'Sim' : 'Não',
         doseNum, doseRT: doseNum ? doseNum + ' Gy' : '-', cirurgia: cx,
         exList, exercicios: exList.join(', ') || 'Nenhum/Não especificado', eletro: exList.includes('Eletroterapia') ? 'Sim' : 'Não' };
@@ -735,7 +738,16 @@
       document.getElementById('statusText').innerText = `"${nomeArq}" processada no seu navegador: ${parsedData.length} atendimentos analisados · ${ign} ignorados (sem permissão no prontuário) · ${dInv} com data inválida/ausente`;
       const badge = document.getElementById('totalRecordsBadge');
       badge.innerText = `${parsedData.length} registros`; badge.classList.remove('hidden');
+      popularFiltros();
       aplicarFiltros();
+    }
+
+    function popularFiltros() {
+      const comp = k => { const c = new Map(); parsedData.forEach(d => d[k].split(' + ').forEach(x => c.set(x, (c.get(x) || 0) + 1))); return [...c.entries()].sort((a, b) => (/^Não/.test(a[0]) - /^Não/.test(b[0])) || b[1] - a[1]).map(e => e[0]); };
+      const fill = (id, vals) => { document.getElementById(id).innerHTML = '<option value="">Todos</option>' + vals.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join(''); };
+      fill('filterDietaAtual', comp('dietaAtual')); fill('filterDieta', comp('dieta'));
+      const ec = new Map(); parsedData.forEach(d => d.exList.forEach(x => ec.set(x, (ec.get(x) || 0) + 1)));
+      fill('filterEx', [...ec.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]).concat(['Nenhum']));
     }
 
     function agruparPacientes(dados) {
@@ -981,6 +993,9 @@
         if (v('filterFOIS') && (d.fois === null || d.fois.toString() !== v('filterFOIS'))) return false;
         if (v('filterSNE') && d.sne !== v('filterSNE')) return false;
         if (v('filterTQT') && d.tqt !== v('filterTQT')) return false;
+        if (v('filterDietaAtual') && !d.dietaAtual.split(' + ').includes(v('filterDietaAtual'))) return false;
+        if (v('filterDieta') && !d.dieta.split(' + ').includes(v('filterDieta'))) return false;
+        if (v('filterEx') && !(v('filterEx') === 'Nenhum' ? d.exList.length === 0 : d.exList.includes(v('filterEx')))) return false;
         if ((de !== null || ate !== null) && d.ts === null) return false;
         if (de !== null && d.ts < de) return false;
         if (ate !== null && d.ts >= ate) return false;
