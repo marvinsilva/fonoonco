@@ -230,6 +230,12 @@
               </div>
             </th>
             <th class="p-3 align-top">
+              <div onclick="ordenarPor('prontuarioRaw')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
+                <span>Prontuário</span>
+                <i id="sort-icon-prontuarioRaw" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
+              </div>
+            </th>
+            <th class="p-3 align-top">
               <div onclick="ordenarPor('prontuario')" class="cursor-pointer select-none flex items-center justify-between hover:text-indigo-600">
                 <span>Paciente</span>
                 <i id="sort-icon-prontuario" class="fa-solid fa-sort text-slate-400 text-xs ml-1"></i>
@@ -266,12 +272,13 @@
               </div>
               <select id="filterGrau" class="table-select filter-trigger" onclick="event.stopPropagation()">
                 <option value="">Todos</option>
-                <option value="Normal">Normal</option>
-                <option value="Leve">Leve</option>
-                <option value="Leve a Moderada">Leve a Moderada</option>
-                <option value="Moderada">Moderada</option>
-                <option value="Moderada a Grave">Moderada a Grave</option>
-                <option value="Grave">Grave</option>
+                <option value="I - Normal">I - Normal</option>
+                <option value="II - Funcional">II - Funcional</option>
+                <option value="III - Leve">III - Leve</option>
+                <option value="IV - Leve a Moderada">IV - Leve a Moderada</option>
+                <option value="V - Moderada">V - Moderada</option>
+                <option value="VI - Moderada a Grave">VI - Moderada a Grave</option>
+                <option value="VII - Grave">VII - Grave</option>
                 <option value="Não informado">Não informado</option>
               </select>
             </th>
@@ -339,7 +346,7 @@
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200">
           <tr>
-            <td colspan="14" class="p-4 text-center text-slate-400">Aguardando seleção de planilha local. Clique em "Carregar Planilha Excel" acima.</td>
+            <td colspan="15" class="p-4 text-center text-slate-400">Aguardando seleção de planilha local. Clique em "Carregar Planilha Excel" acima.</td>
           </tr>
         </tbody>
       </table>
@@ -650,22 +657,48 @@
       };
     }
 
-    const GRAUS=['Normal','Leve','Leve a Moderada','Moderada','Moderada a Grave','Grave'];
-    const COR=['#10b981','#3b82f6','#f59e0b','#d97706','#ef4444','#b91c1c','#94a3b8'];
-    const CX=[['Glossectomia',/glossectomia/],['Laringectomia Total',/laringectomia\s*total/],['Laringectomia Parcial',/laringectomia/],['Mandibulectomia',/mandibulectomia/],['Esvaziamento Cervical',/esvaziamento\s*cervical/],['Ressecção de Lesão',/ressec[çc][ãa]o/]];
+    const GRAUS = ['I - Normal', 'II - Funcional', 'III - Leve', 'IV - Leve a Moderada', 'V - Moderada', 'VI - Moderada a Grave', 'VII - Grave'];
+    const COR = ['#10b981', '#6ee7b7', '#3b82f6', '#f59e0b', '#d97706', '#ef4444', '#b91c1c', '#94a3b8'];
+    const cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+    // Cirurgias relevantes (cabeça e pescoço, pulmão, esôfago), listadas pelo nome como aparecem no prontuário
+    const CX = [
+      [/laringectomia(?:\s+(total|parcial|supracricoide|supraglótica|horizontal|vertical))?/g, m => 'Laringectomia' + (m[1] ? ' ' + m[1] : '')],
+      [/hemilaringectomia/g, 'Hemilaringectomia'], [/cordectomia/g, 'Cordectomia'], [/aritenoidectomia/g, 'Aritenoidectomia'], [/laringofissura/g, 'Laringofissura'],
+      [/\bglossectomia(?:\s+(total|parcial|subtotal))?/g, m => 'Glossectomia' + (m[1] ? ' ' + m[1] : '')],
+      [/baseglossectomia/g, 'Baseglossectomia'],
+      [/\w*glossomandibulectomia/g, m => cap(m[0])],
+      [/orofaringectomia|bucofaringectomia|hipofaringectomia|faringolaringectomia|\bfaringectomia/g, m => cap(m[0])],
+      [/\bmandibulectomia/g, 'Mandibulectomia'], [/maxilectomia/g, 'Maxilectomia'],
+      [/esvaziamento\s*cervical/g, 'Esvaziamento cervical'], [/linfadenectomia\s*cervical/g, 'Linfadenectomia cervical'],
+      [/tireoidectomia|tiroidectomia/g, 'Tireoidectomia'], [/paratireoidectomia/g, 'Paratireoidectomia'], [/parotidectomia/g, 'Parotidectomia'],
+      [/amigdalectomia|amidalectomia|tonsilectomia/g, 'Amigdalectomia'],
+      [/traqueoplastia/g, 'Traqueoplastia'], [/tireoplastia/g, 'Tireoplastia'],
+      [/lobectomia(?!\s*(?:temporal|frontal|parietal|occipital|cerebral))/g, 'Lobectomia'], [/segmentectomia/g, 'Segmentectomia'], [/pneumonectomia|pneumectomia/g, 'Pneumectomia'], [/toracotomia/g, 'Toracotomia'],
+      [/esofagectomia/g, 'Esofagectomia'], [/esofagogastroplastia/g, 'Esofagogastroplastia'], [/esofagoplastia/g, 'Esofagoplastia'],
+      [/ressec[çc][ãa]o[^.;,]{0,50}?\b(?:l[íi]ngua|boca|assoalho|palato|l[áa]bio|orofaringe|laringe|faringe|vest[íi]bulo(?:\s+nasal)?|oral|parotid\w*|mandibular|maxilar)(?!\w)/g, m => cap(m[0].replace(/\s+/g, ' ').trim())]
+    ];
+    function acharCirurgias(txt) {
+      const out = new Set();
+      CX.forEach(([rx, lab]) => { for (const m of txt.matchAll(rx)) out.add(typeof lab === 'function' ? lab(m) : lab); });
+      return [...out];
+    }
     const EXS=[['TVSO',/tvso|canudo|lax\s*vox|tubo\s*de\s*resson/],['Masako',/masako/],['Mendelson',/mendel/],['CTAR',/ctar/],['Sobrearticulação',/sobrearticula/],['Rotação de língua',/rota[çc][ãa]o\s*de\s*l[íi]ngua/],['Varredura de palato',/varredura|varrer/],['Shaker',/shaker/],['Deglutição c/ esforço',/degluti[çc][ãa]o\s*com\s*esfor[çc]o|degluti\w*\s*com\s*esfor/],['Eletroterapia',/eletro/],['Alongamento',/alongamento/]];
 
     function detectarGrau(txt) {
       const s = txt.replace(/\s+/g, ' ').toLowerCase();
+      const rom = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7 };
+      const pard = s.match(/pard\s*[:\-=]?\s*(vii|vi|iv|v|iii|ii|i|[1-7])\b/);
+      if (pard) { const n = rom[pard[1]] || parseInt(pard[1]); return GRAUS[n - 1]; }
       const i = s.search(/impress[ãa]o/);
       for (const alvo of (i >= 0 ? [s.slice(i, i + 400), s] : [s])) {
-        if (/sem\s*disfagia|degluti[çc][ãa]o\s*(normal|funcional)|aus[êe]ncia\s*de\s*disfagia|disfagia\s*ausente/.test(alvo)) return 'Normal';
+        if (/sem\s*disfagia|degluti[çc][ãa]o\s*normal|aus[êe]ncia\s*de\s*disfagia|disfagia\s*ausente/.test(alvo)) return GRAUS[0];
+        if (/degluti[çc][ãa]o\s*funcional/.test(alvo)) return GRAUS[1];
         for (const x of (alvo.match(/disfagia[^.;]{0,50}/g) || [])) {
-          if (/leve\s*(a|à|\/|-|até)\s*moderad/.test(x)) return 'Leve a Moderada';
-          if (/moderad[ao]\s*(a|à|\/|-|até)\s*grave/.test(x)) return 'Moderada a Grave';
-          if (/\b(leve|discret[ao])\b/.test(x)) return 'Leve';
-          if (/moderad[ao]/.test(x)) return 'Moderada';
-          if (/\b(grave|severa)\b/.test(x)) return 'Grave';
+          if (/leve\s*(a|à|\/|-|até)\s*moderad/.test(x)) return GRAUS[3];
+          if (/moderad[ao]\s*(a|à|\/|-|até)\s*grave/.test(x)) return GRAUS[5];
+          if (/\b(leve|discret[ao])\b/.test(x)) return GRAUS[2];
+          if (/moderad[ao]/.test(x)) return GRAUS[4];
+          if (/\b(grave|severa)\b/.test(x)) return GRAUS[6];
         }
       }
       return 'Não informado';
@@ -681,7 +714,7 @@
       const tipo = /\b(gtt|gastrostomia)\b/.test(t) ? 'GTT' : /\b(jej|jejunostomia)\b/.test(t) ? 'JEJ' : /\bsne\b|nasoent|sonda\s*enteral/.test(t) ? 'SNE' : null;
       const negada = /(sem|retirad[ao]|retirou|removid[ao]|suspens[ao]|desmam\w*|alta d[ea])\s[^.;]{0,25}\b(sne|sonda|gtt|gastrostomia|jejunostomia)/.test(t);
       const sondaTipo = (tipo && !negada) ? tipo : 'Não';
-      const cx = (CX.find(([n, r]) => r.test(th)) || CX.find(([n, r]) => r.test(t)) || ['Não descrita'])[0];
+      const cx = acharCirurgias(th).length ? acharCirurgias(th) : acharCirurgias(t);
       const exList = EXS.filter(([n, r]) => r.test(t)).map(x => x[0]);
       const doseNum = H.doseNum || E.doseNum;
       return { ...E,
@@ -689,7 +722,7 @@
         sne: sondaTipo !== 'Não' ? 'Sim' : 'Não', sondaTipo,
         tqt: tqtStatus, tqtStatus,
         rt: (H.rt === 'Sim' || E.rt === 'Sim') ? 'Sim' : 'Não', qt: (H.qt === 'Sim' || E.qt === 'Sim') ? 'Sim' : 'Não',
-        doseNum, doseRT: doseNum ? doseNum + ' Gy' : '-', cirurgia: cx,
+        doseNum, doseRT: doseNum ? doseNum + ' Gy' : '-', cirurgia: cx.join(', ') || 'Sem cirurgia relevante', cirurgias: cx,
         exList, exercicios: exList.join(', ') || 'Nenhum/Não especificado', eletro: exList.includes('Eletroterapia') ? 'Sim' : 'Não' };
     }
 
@@ -822,7 +855,7 @@
     }
 
     function atualizarIconesOrdenacao() {
-      const colunas = ['data', 'prontuario', 'idade', 'peso', 'tratamento', 'cirurgia', 'grauDisfagia', 'fois', 'sne', 'tqt', 'edema', 'dietaAtual', 'dieta', 'exercicios'];
+      const colunas = ['data', 'prontuarioRaw', 'prontuario', 'idade', 'peso', 'tratamento', 'cirurgia', 'grauDisfagia', 'fois', 'sne', 'tqt', 'edema', 'dietaAtual', 'dieta', 'exercicios'];
       
       colunas.forEach(col => {
         const icon = document.getElementById(`sort-icon-${col}`);
@@ -857,6 +890,7 @@
         if (item.qt === 'Sim') trat.push('QT');
         return `<tr class="hover:bg-slate-50 transition border-b border-slate-100">
           <td class="p-3 font-medium text-slate-700">${esc(item.data)}</td>
+          <td class="p-3 text-slate-600">${esc(item.prontuarioRaw === 'S/N' ? '-' : item.prontuarioRaw)}</td>
           <td class="p-3 font-semibold text-indigo-600">${esc(item.prontuario)}</td>
           <td class="p-3">${item.idade ?? '-'}</td>
           <td class="p-3 font-medium">${item.peso !== '-' ? esc(item.peso) + ' kg' : '-'}</td>
@@ -877,18 +911,18 @@
     function irPagina(d) { pagina += d; renderTabela(filtradosAtuais); }
 
     function exportarCsv() {
-      const cab = ['Data', 'Paciente', 'Idade', 'Peso', 'RT', 'Dose RT', 'QT', 'Cirurgia', 'Grau Disfagia', 'FOIS', 'ASHA NOMS', 'Sonda', 'TQT', 'Edema', 'Dieta VO atual', 'Conduta dieta', 'Exercícios'];
+      const cab = ['Data', 'Prontuário', 'Paciente', 'Idade', 'Peso', 'RT', 'Dose RT', 'QT', 'Cirurgia', 'Grau Disfagia', 'FOIS', 'ASHA NOMS', 'Sonda', 'TQT', 'Edema', 'Dieta VO atual', 'Conduta dieta', 'Exercícios'];
       const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-      const linhas = filtradosAtuais.map(d => [d.data, d.prontuario, d.idade, d.peso, d.rt, d.doseRT, d.qt, d.cirurgia, d.grauDisfagia, d.fois, d.asha, d.sondaTipo, d.tqtStatus, d.edema, d.dietaAtual, d.dieta, d.exercicios].map(q).join(';'));
+      const linhas = filtradosAtuais.map(d => [d.data, d.prontuarioRaw, d.prontuario, d.idade, d.peso, d.rt, d.doseRT, d.qt, d.cirurgia, d.grauDisfagia, d.fois, d.asha, d.sondaTipo, d.tqtStatus, d.edema, d.dietaAtual, d.dieta, d.exercicios].map(q).join(';'));
       const blob = new Blob(['\ufeff' + [cab.map(q).join(';'), ...linhas].join('\r\n')], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dashboard_fono_onco.csv'; a.click();
     }
 
     function getGrauBadgeClass(grau) {
-      if (grau.includes('Leve a Moderada') || grau.includes('Moderada')) return 'bg-amber-100 text-amber-800';
+      if (grau.includes('Normal') || grau.includes('Funcional')) return 'bg-emerald-100 text-emerald-800';
       if (grau.includes('Grave')) return 'bg-red-100 text-red-800';
+      if (grau.includes('Moderada')) return 'bg-amber-100 text-amber-800';
       if (grau.includes('Leve')) return 'bg-blue-100 text-blue-800';
-      if (grau.includes('Normal')) return 'bg-emerald-100 text-emerald-800';
       return 'bg-slate-100 text-slate-600';
     }
 
@@ -919,7 +953,7 @@
       const P = pacs.map(a => {
         const l = a[a.length - 1], g = ultimo(a, d => d.grauDisfagia !== 'Não informado'), f = ultimo(a, d => d.fois);
         return { a, grau: g ? g.grauDisfagia : 'Não informado', fois: f ? f.fois : null, idade: l.idade, faixa: l.faixa,
-          cirurgia: (a.find(d => d.cirurgia !== 'Não descrita') || { cirurgia: 'Não descrita' }).cirurgia,
+          cx: [...new Set(a.flatMap(d => d.cirurgias))],
           rt: a.some(d => d.rt === 'Sim'), dose: Math.max(0, ...a.map(d => d.doseNum || 0)) };
       });
       const np = P.length, rodape = `n = ${np} pacientes (último registro de cada um)`;
@@ -940,8 +974,10 @@
       nota('chartFOIS', `n = ${P.filter(p => p.fois).length} pacientes com FOIS registrado`);
 
       // Cirurgia / RT / Idade x Grau
-      const cxs = CX.map(c => c[0]);
-      pilha('chartCirurgiaDisfagia', cxs, P, (p, l) => p.cirurgia === l); nota('chartCirurgiaDisfagia', rodape);
+      const cc = new Map(); P.forEach(p => p.cx.forEach(x => cc.set(x, (cc.get(x) || 0) + 1)));
+      const cxs = [...cc.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]);
+      pilha('chartCirurgiaDisfagia', cxs, P, (p, l) => p.cx.includes(l));
+      nota('chartCirurgiaDisfagia', rodape + ' · pacientes com mais de uma cirurgia aparecem em cada uma delas');
       const fr = ['Sem RT descrita', 'RT, dose não descrita', '< 50 Gy', '50 - 66 Gy', '> 66 Gy'];
       pilha('chartRTDisfagia', fr, P, (p, l) => l === fr[0] ? !p.rt : l === fr[1] ? p.rt && !p.dose : l === fr[2] ? p.dose > 0 && p.dose < 50 : l === fr[3] ? p.dose >= 50 && p.dose <= 66 : p.dose > 66);
       nota('chartRTDisfagia', rodape + ' · a dose só aparece quando registrada na evolução/histórico');
@@ -999,7 +1035,7 @@
         if ((de !== null || ate !== null) && d.ts === null) return false;
         if (de !== null && d.ts < de) return false;
         if (ate !== null && d.ts >= ate) return false;
-        if (q && !`${d.data} ${d.prontuario} ${d.grauDisfagia} ${d.dieta} ${d.dietaAtual} ${d.cirurgia} ${d.exercicios}`.toLowerCase().includes(q)) return false;
+        if (q && !`${d.data} ${d.prontuarioRaw} ${d.prontuario} ${d.grauDisfagia} ${d.dieta} ${d.dietaAtual} ${d.cirurgia} ${d.exercicios}`.toLowerCase().includes(q)) return false;
         return true;
       });
       if (currentSortColumn) f.sort((a, b) => compararValores(a, b, currentSortColumn, currentSortDirection));
